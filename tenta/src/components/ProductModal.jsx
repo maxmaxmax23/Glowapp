@@ -1,6 +1,6 @@
-// INCREMENT: ProductModal.jsx Dual UI (Modal + Swipe Sheet)
-// Type: UI Enhancement (Responsive Presentation Layer)
-// Scope: Modal layout adapts to device (desktop → modal, mobile → swipe sheet)
+// File: src/components/ProductModal.jsx
+// INCREMENT: Mobile swipe-up modal with rubber-band animation
+// Layer: Presentation enhancement (mobile only)
 
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
@@ -18,16 +18,14 @@ import {
   Text,
   VStack,
   Box,
-  useBreakpointValue,
-  useColorModeValue,
+  useMediaQuery,
 } from "@chakra-ui/react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 
 export default function ProductModal({ code, onClose }) {
   const [product, setProduct] = useState(null);
   const [showUploader, setShowUploader] = useState(false);
-  const isMobile = useBreakpointValue({ base: true, md: false });
-  const bgColor = useColorModeValue("gray.900", "gray.800");
+  const [isDesktop] = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -44,58 +42,94 @@ export default function ProductModal({ code, onClose }) {
   }, [code]);
 
   if (showUploader)
-    return <ProductUploaderModal product={product} onClose={() => setShowUploader(false)} />;
-
-  // --- Mobile Swipe-Up Version ---
-  if (isMobile) {
     return (
-      <AnimatePresence>
-        <Box
-          pos="fixed"
-          inset="0"
-          bg="blackAlpha.700"
-          backdropFilter="blur(4px)"
-          zIndex="overlay"
-          onClick={onClose}
+      <ProductUploaderModal
+        product={product}
+        onClose={() => setShowUploader(false)}
+      />
+    );
+
+  // --- Mobile swipe-up + rubber-band close ---
+  if (!isDesktop) {
+    const y = useMotionValue(0);
+    const opacity = useTransform(y, [0, 250], [1, 0.3]);
+    let startY = 0;
+    const maxDrag = 180;
+    const threshold = 100;
+
+    const handleTouchStart = (e) => {
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+    };
+
+    const handleTouchMove = (e) => {
+      const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      let diff = currentY - startY;
+      if (diff > 0) {
+        const resistance =
+          diff > maxDrag ? maxDrag + (diff - maxDrag) * 0.3 : diff;
+        y.set(resistance);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      if (y.get() > threshold) {
+        animate(y, 600, {
+          type: "spring",
+          stiffness: 200,
+          damping: 30,
+          onComplete: onClose,
+        });
+      } else {
+        animate(y, 0, {
+          type: "spring",
+          stiffness: 300,
+          damping: 20,
+        });
+      }
+    };
+
+    return (
+      <Modal isOpen onClose={onClose} size="full" motionPreset="none">
+        <ModalOverlay bg="blackAlpha.700" style={{ opacity }} />
+        <ModalContent
+          as={motion.div}
+          style={{ y }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseMove={handleTouchMove}
+          onMouseUp={handleTouchEnd}
+          bg="gray.900"
+          color="gold"
+          borderTopRadius="2xl"
+          p={4}
+          h="80vh"
+          overflowY="auto"
+          position="absolute"
+          bottom="0"
         >
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", stiffness: 70, damping: 18 }}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              width: "100%",
-              backgroundColor: bgColor,
-              borderTopLeftRadius: "1.5rem",
-              borderTopRightRadius: "1.5rem",
-              padding: "1.25rem",
-              boxShadow: "0 -8px 24px rgba(0,0,0,0.5)",
-              color: "#FFD700",
-            }}
-            onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
-          >
+          <ModalHeader textAlign="center" cursor="grab">
             <Box
-              w="50px"
-              h="5px"
-              bg="gray.500"
+              w="40px"
+              h="4px"
+              bg="gray.600"
               borderRadius="full"
               mx="auto"
-              mb={3}
+              mb={2}
             />
+            {product ? product.description || "Producto" : "Cargando..."}
+          </ModalHeader>
+
+          <ModalBody>
             {product ? (
-              <VStack align="start" spacing={3}>
-                <Text fontWeight="bold" fontSize="lg">
-                  {product.description || "Producto"}
-                </Text>
-                <Text fontSize="sm">
+              <VStack spacing={3} align="start">
+                <Text>
                   <b>Código:</b> {code}
                 </Text>
-                <Text fontSize="sm">
+                <Text>
                   <b>Precio:</b> ${product.price ?? "Sin precio"}
                 </Text>
-
                 {product.image && (
                   <Image
                     src={product.image}
@@ -103,33 +137,28 @@ export default function ProductModal({ code, onClose }) {
                     borderRadius="md"
                     w="full"
                     objectFit="cover"
-                    maxH="200px"
                   />
                 )}
-
-                <Box w="full" pt={2} display="flex" gap={2}>
-                  <Button
-                    flex="1"
-                    colorScheme="yellow"
-                    onClick={() => setShowUploader(true)}
-                  >
-                    Subir imagen
-                  </Button>
-                  <Button flex="1" colorScheme="red" onClick={onClose}>
-                    Cerrar
-                  </Button>
-                </Box>
               </VStack>
             ) : (
-              <Text color="gray.400">Cargando...</Text>
+              <Text>Cargando...</Text>
             )}
-          </motion.div>
-        </Box>
-      </AnimatePresence>
+          </ModalBody>
+
+          <ModalFooter justifyContent="space-between">
+            <Button colorScheme="yellow" onClick={() => setShowUploader(true)}>
+              Subir imagen
+            </Button>
+            <Button colorScheme="red" onClick={onClose}>
+              Cerrar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     );
   }
 
-  // --- Desktop Modal Version ---
+  // --- Desktop fallback ---
   return (
     <Modal isOpen onClose={onClose} isCentered size="md" motionPreset="scale">
       <ModalOverlay bg="blackAlpha.800" />
@@ -146,7 +175,6 @@ export default function ProductModal({ code, onClose }) {
               <Text>
                 <b>Precio:</b> ${product.price ?? "Sin precio"}
               </Text>
-
               {product.image && (
                 <Image
                   src={product.image}
