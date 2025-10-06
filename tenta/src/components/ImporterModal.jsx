@@ -1,8 +1,4 @@
-// INCREMENT: ImporterModal.jsx Chakra UI Migration
-// Type: UI Migration
-// Scope: Modal layout, buttons, progress
-// Mode: Candidate (test preview before full integration)
-
+// File: src/components/ImporterModal.jsx
 import React, { useState } from "react";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -10,15 +6,10 @@ import PropTypes from "prop-types";
 import {
   Box,
   VStack,
-  Button,
   Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  Button,
   Progress,
+  CloseButton,
 } from "@chakra-ui/react";
 
 export default function ImporterModal({ queuedData, onClose }) {
@@ -64,49 +55,69 @@ export default function ImporterModal({ queuedData, onClose }) {
   };
 
   return (
-    <Modal isOpen onClose={onClose} isCentered size="md" motionPreset="scale">
-      <ModalOverlay bg="blackAlpha.800" />
-      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
-        <ModalHeader textAlign="center">Importar Productos</ModalHeader>
-        <ModalBody>
-          <VStack spacing={4}>
-            <Button
-              colorScheme="gold"
-              w="full"
-              onClick={handleImport}
-              isLoading={loading}
-            >
-              {loading ? "Importando..." : "Importar datos a Firebase"}
-            </Button>
+    <Box
+      position="fixed"
+      inset={0}
+      bg="blackAlpha.900"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      p={4}
+      zIndex={50}
+      overflowY="auto"
+    >
+      <Box
+        maxW="md"
+        w="full"
+        bg="gray.900"
+        color="gold"
+        borderRadius="xl"
+        p={4}
+        textAlign="center"
+      >
+        <VStack spacing={3}>
+          <Text fontSize="xl" fontWeight="bold">
+            Importar Productos
+          </Text>
 
-            {progress.total > 0 && (
-              <Box w="full">
-                <Progress
-                  value={(progress.written / progress.total) * 100}
-                  colorScheme="gold"
-                  size="sm"
-                  mb={2}
-                />
-                <Text fontSize="sm" textAlign="center">
-                  Escritos: {progress.written} / {progress.total}
-                </Text>
-              </Box>
-            )}
-          </VStack>
-        </ModalBody>
-        <ModalFooter justifyContent="center">
+          <Button
+            onClick={handleImport}
+            colorScheme="gold"
+            w="full"
+            isLoading={loading}
+            loadingText="Importando..."
+          >
+            Importar datos a Firebase
+          </Button>
+
+          {progress.total > 0 && (
+            <Box w="full">
+              <Text fontSize="sm" mb={1}>
+                Escritos: {progress.written} / {progress.total}
+              </Text>
+              <Progress
+                value={(progress.written / progress.total) * 100}
+                size="sm"
+                colorScheme="gold"
+                borderRadius="md"
+              />
+            </Box>
+          )}
+
           <Button
             onClick={onClose}
             variant="outline"
-            color="gold"
             borderColor="gold"
+            color="gold"
             _hover={{ bg: "gold", color: "black" }}
+            w="full"
           >
             Cerrar
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </VStack>
+      </Box>
+    </Box>
   );
 }
 

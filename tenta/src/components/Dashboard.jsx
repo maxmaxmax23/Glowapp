@@ -1,38 +1,39 @@
-// INCREMENT: Dashboard.jsx Chakra UI Migration
-// Type: UI Migration
-// Scope: Layout and buttons using Chakra
-// Mode: Candidate (test in preview before integration)
-
+// File: src/components/Dashboard.jsx
 import React from "react";
-import { Flex, VStack, Button, Text, Box } from "@chakra-ui/react";
+import { VStack, Button, Text, Box } from "@chakra-ui/react";
 
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
   return (
-    <Flex direction="column" w="full" maxW="lg" mx="auto" p={4} gap={4}>
-      {/* Title */}
-      <Text fontSize="2xl" fontWeight="bold" color="gold" textAlign="center" mb={4}>
-        Dashboardd
+    <Box
+      p={4}
+      maxW="lg"
+      mx="auto"
+      w="full"
+      display="flex"
+      flexDirection="column"
+      gap={4}
+    >
+      <Text fontSize="2xl" fontWeight="bold" textAlign="center" fontFamily="'Distrampler', serif">
+        Dashboard
       </Text>
 
-      {/* Action Buttons */}
-      <VStack spacing={3} w="full">
-        <Button colorScheme="gold" w="full" onClick={onScan}>
+      <VStack spacing={3} align="stretch">
+        <Button variant="primary" onClick={onScan}>
           Escanear Producto
         </Button>
 
-        <Button colorScheme="gold" w="full" onClick={onOpenImporter}>
+        <Button variant="primary" onClick={onOpenImporter}>
           Importar JSON
         </Button>
 
-        <Button colorScheme="gold" w="full" onClick={onOpenMerger}>
+        <Button variant="primary" onClick={onOpenMerger}>
           Combinar Archivos Excel
         </Button>
       </VStack>
 
-      {/* Firebase Writes */}
-      <Box mt={6} w="full" textAlign="center">
-        <Text color="gold">Escrituras en Firebase: {firebaseWrites}</Text>
-      </Box>
-    </Flex>
+      <Text mt={6} textAlign="center">
+        Escrituras en Firebase: {firebaseWrites}
+      </Text>
+    </Box>
   );
 }

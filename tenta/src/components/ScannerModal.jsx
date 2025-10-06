@@ -1,26 +1,22 @@
-// INCREMENT: ScannerModal.jsx Chakra UI Migration
-// Type: UI Migration
-// Scope: Modal layout, inputs, buttons, scrollable match list
-// Mode: Candidate (test preview before integration)
-
+// File: src/components/ScannerModal.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import ProductUploaderModal from "./ProductUploaderModal.jsx";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
 import {
-  Box,
-  Button,
-  Input,
-  VStack,
-  HStack,
-  Text,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
+  Input,
+  Button,
+  VStack,
+  HStack,
+  Box,
+  Text,
   Divider,
   ScrollView,
 } from "@chakra-ui/react";
@@ -96,32 +92,29 @@ export default function ScannerModal({ onClose }) {
     setManualSearch("");
   };
 
-  if (scanResult)
-    return <ProductUploaderModal product={scanResult} onClose={resetScanner} />;
-
-  return (
-    <Modal isOpen={true} onClose={onClose} size="md" isCentered>
+  return !scanResult ? (
+    <Modal isOpen onClose={onClose} size="md" scrollBehavior="inside" isCentered>
       <ModalOverlay bg="blackAlpha.800" />
-      <ModalContent bg="gray.900" color="gold" rounded="2xl">
+      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
         <ModalHeader textAlign="center">Buscar / Escanear Producto</ModalHeader>
         <ModalBody>
-          <VStack spacing={3}>
-            <HStack w="full">
+          <VStack spacing={3} align="stretch">
+            <HStack>
               <Input
+                placeholder="Buscar por ID, código o descripción..."
                 value={manualSearch}
                 onChange={(e) => {
                   setManualSearch(e.target.value);
                   handleSearch(e.target.value);
                 }}
-                placeholder="Buscar por ID, código o descripción..."
                 bg="black"
                 color="white"
                 size="sm"
               />
               <Button
-                onClick={() => setIsScanning((prev) => !prev)}
-                colorScheme="yellow"
+                colorScheme="gold"
                 size="sm"
+                onClick={() => setIsScanning((prev) => !prev)}
               >
                 {isScanning ? "Detener" : "Escanear"}
               </Button>
@@ -129,36 +122,31 @@ export default function ScannerModal({ onClose }) {
 
             {isScanning && (
               <Box
-                key={scannerKey}
                 ref={readerRef}
+                key={scannerKey}
                 id="reader"
                 w="full"
                 h="64"
-                bg="black"
-                border="1px solid gold"
-                rounded="md"
+                border="2px"
+                borderColor="gold"
+                borderRadius="lg"
                 overflow="hidden"
               />
             )}
 
             {matches.length > 0 && (
-              <Box
-                maxH="64"
-                overflowY="auto"
-                w="full"
-                border="1px solid gold"
-                rounded="md"
-              >
+              <Box maxH="64" overflowY="auto" border="1px" borderColor="gold" borderRadius="md">
                 <VStack spacing={1} align="stretch">
                   {matches.map((item, idx) => (
                     <Box
                       key={idx}
                       p={2}
-                      borderBottom="1px solid gray"
+                      borderBottom="1px"
+                      borderColor="gray.700"
                       _hover={{ bg: "gray.800", cursor: "pointer" }}
                       onClick={() => openProduct(item)}
                     >
-                      <Text fontSize="sm" fontWeight="bold" color="gold">
+                      <Text fontWeight="bold" color="gold" fontSize="sm">
                         {item.id}
                       </Text>
                       <Text fontSize="xs" color="gray.300">
@@ -174,13 +162,19 @@ export default function ScannerModal({ onClose }) {
             )}
           </VStack>
         </ModalBody>
-
-        <ModalFooter>
-          <Button onClick={onClose} colorScheme="gray">
+        <ModalFooter justifyContent="center">
+          <Button
+            colorScheme="gray"
+            variant="outline"
+            onClick={onClose}
+            _hover={{ bg: "gold", color: "black" }}
+          >
             Cerrar
           </Button>
         </ModalFooter>
       </ModalContent>
     </Modal>
+  ) : (
+    <ProductUploaderModal product={scanResult} onClose={resetScanner} />
   );
 }

@@ -1,22 +1,12 @@
-// INCREMENT: MergerModal.jsx Chakra UI Migration
-// Type: UI Migration
-// Scope: Modal layout, inputs, buttons, table
-// Mode: Candidate (test preview before integration)
-
+// File: src/components/MergerModal.jsx
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
 import {
   Box,
   VStack,
   HStack,
-  Button,
   Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
+  Button,
   Table,
   Thead,
   Tbody,
@@ -24,6 +14,13 @@ import {
   Th,
   Td,
   TableContainer,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Progress,
 } from "@chakra-ui/react";
 
 export default function MergerModal({ onClose, addToQueue }) {
@@ -150,94 +147,86 @@ export default function MergerModal({ onClose, addToQueue }) {
   };
 
   return (
-    <Modal isOpen onClose={onClose} isCentered size="xl" motionPreset="scale">
+    <Modal isOpen onClose={onClose} size="xl" scrollBehavior="inside" isCentered>
       <ModalOverlay bg="blackAlpha.800" />
       <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
-        <ModalHeader textAlign="center">Fusionar Archivos Excel</ModalHeader>
+        <ModalHeader>Fusionar Archivos Excel</ModalHeader>
         <ModalBody>
-          <VStack spacing={4} mb={4}>
-            <VStack spacing={2} w="full">
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={(e) => setEquivalenciasFile(e.target.files[0])}
-              />
-              <Text fontSize="sm" color="gray.400">
-                Archivo de Equivalencias
-              </Text>
+          <VStack spacing={3} mb={3} align="stretch">
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => setEquivalenciasFile(e.target.files[0])}
+            />
+            <Text fontSize="sm" color="gray.400">
+              Archivo de Equivalencias
+            </Text>
 
-              <input
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={(e) => setPreciosFile(e.target.files[0])}
-              />
-              <Text fontSize="sm" color="gray.400">
-                Archivo de Precios
-              </Text>
-            </VStack>
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => setPreciosFile(e.target.files[0])}
+            />
+            <Text fontSize="sm" color="gray.400">
+              Archivo de Precios
+            </Text>
 
             <Button
               colorScheme="gold"
-              w="full"
               onClick={handleMerge}
               isLoading={loading}
+              loadingText="Procesando..."
             >
-              {loading ? "Procesando..." : "Fusionar y Previsualizar"}
+              Fusionar y Previsualizar
             </Button>
 
             <Button
               colorScheme="green"
-              w="full"
               onClick={handleAddToQueue}
               isDisabled={mergedData.length === 0}
             >
               Añadir a la cola
             </Button>
-
-            <Box w="full" textAlign="left">
-              <Text fontSize="sm">✅ A escribir: {stats.written}</Text>
-              <Text fontSize="sm">⚠️ Ignorados: {stats.skipped}</Text>
-              <Text fontSize="sm">⏰ Fuera de vigencia: {stats.outOfTime}</Text>
-            </Box>
-
-            {mergedData.length > 0 && (
-              <TableContainer maxH="64" overflowY="auto" border="1px solid" borderColor="gold" borderRadius="md">
-                <Table size="sm" variant="simple" colorScheme="gold">
-                  <Thead bg="gold" color="black" position="sticky" top={0}>
-                    <Tr>
-                      <Th>Estado</Th>
-                      <Th>ID</Th>
-                      <Th>Descripción</Th>
-                      <Th>Códigos</Th>
-                      <Th>Precio</Th>
-                      <Th>Vigencia</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {mergedData.map((item, idx) => (
-                      <Tr key={idx} borderBottom="1px solid" borderColor="gray.700">
-                        <Td>{new Date(item.vigencia) < new Date() ? "Fuera de vigencia" : "A escribir"}</Td>
-                        <Td>{item.productId}</Td>
-                        <Td>{item.description}</Td>
-                        <Td>{item.barcodes.join(", ")}</Td>
-                        <Td>${Math.round(item.price)}</Td>
-                        <Td>{item.vigencia}</Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              </TableContainer>
-            )}
           </VStack>
+
+          <Box mb={3}>
+            <Text fontSize="sm">
+              ✅ A escribir: {stats.written} | ⚠️ Ignorados: {stats.skipped} | ⏰ Fuera de vigencia: {stats.outOfTime}
+            </Text>
+          </Box>
+
+          {mergedData.length > 0 && (
+            <TableContainer maxH="300px" overflowY="auto" border="1px" borderColor="gold" borderRadius="md">
+              <Table variant="simple" size="sm">
+                <Thead bg="gold" color="black" position="sticky" top={0}>
+                  <Tr>
+                    <Th>Estado</Th>
+                    <Th>ID</Th>
+                    <Th>Descripción</Th>
+                    <Th>Códigos</Th>
+                    <Th>Precio</Th>
+                    <Th>Vigencia</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {mergedData.map((item, idx) => (
+                    <Tr key={idx} borderBottom="1px" borderColor="gray.700">
+                      <Td>{new Date(item.vigencia) < new Date() ? "Fuera de vigencia" : "A escribir"}</Td>
+                      <Td>{item.productId}</Td>
+                      <Td>{item.description}</Td>
+                      <Td>{item.barcodes.join(", ")}</Td>
+                      <Td>${Math.round(item.price)}</Td>
+                      <Td>{item.vigencia}</Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </TableContainer>
+          )}
         </ModalBody>
-        <ModalFooter justifyContent="center">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            color="gold"
-            borderColor="gold"
-            _hover={{ bg: "gold", color: "black" }}
-          >
+
+        <ModalFooter>
+          <Button variant="outline" borderColor="gold" color="gold" _hover={{ bg: "gold", color: "black" }} onClick={onClose}>
             Cerrar
           </Button>
         </ModalFooter>

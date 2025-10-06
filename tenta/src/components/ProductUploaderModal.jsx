@@ -1,24 +1,16 @@
-// INCREMENT: ProductUploaderModal.jsx Chakra UI Migration
-// Type: UI Migration
-// Scope: Modal layout, image preview, buttons
-// Mode: Candidate (test preview before integration)
-
+// File: src/components/ProductUploaderModal.jsx
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
 import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Box,
-  Button,
-  Image,
   VStack,
   Text,
+  Button,
+  Image,
+  Input,
+  Center,
   Spinner,
 } from "@chakra-ui/react";
 
@@ -29,6 +21,7 @@ export default function ProductUploaderModal({ product, onClose }) {
 
   if (!product) return null;
 
+  // Load existing photo from Firestore on mount
   useEffect(() => {
     if (product.photoURL) {
       setPhotoURL(product.photoURL);
@@ -39,7 +32,7 @@ export default function ProductUploaderModal({ product, onClose }) {
           const url = await getDownloadURL(fileRef);
           setPhotoURL(url);
         } catch {
-          // no existing image found
+          // silently ignore
         }
       };
       tryFetchExisting();
@@ -75,7 +68,9 @@ export default function ProductUploaderModal({ product, onClose }) {
       const fileRef = ref(storage, `images/${product.id}.jpg`);
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
+
       await updateDoc(doc(db, "products", product.id), { photoURL: url });
+
       setPhotoURL(url);
       setMessage("✅ Photo uploaded successfully.");
     } catch (err) {
@@ -87,76 +82,95 @@ export default function ProductUploaderModal({ product, onClose }) {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} size="md" isCentered>
-      <ModalOverlay bg="blackAlpha.800" />
-      <ModalContent bg="gray.900" color="gold" rounded="2xl">
-        <ModalHeader textAlign="center">{product.description}</ModalHeader>
-        <ModalBody>
-          <VStack spacing={3}>
-            {photoURL ? (
-              <Image
-                src={photoURL}
-                alt="Product"
-                w="full"
-                h="48"
-                objectFit="cover"
-                borderRadius="md"
-              />
-            ) : (
-              <Box
-                w="full"
-                h="48"
-                bg="gray.800"
-                rounded="md"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-              >
-                <Text>No photo yet</Text>
-              </Box>
-            )}
+    <Box
+      position="fixed"
+      inset={0}
+      bg="blackAlpha.900"
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      p={4}
+      zIndex={50}
+      overflowY="auto"
+    >
+      <Box
+        maxW="md"
+        w="full"
+        bg="gray.900"
+        color="gold"
+        borderRadius="xl"
+        p={4}
+        textAlign="center"
+      >
+        <Text fontSize="xl" fontWeight="bold" mb={4}>
+          {product.description}
+        </Text>
 
-            <VStack spacing={2} w="full">
-              <Button
-                onClick={handleTakePhoto}
-                colorScheme="yellow"
-                w="full"
-                isDisabled={uploading}
-              >
-                {uploading ? <Spinner size="sm" /> : "📷 Take Photo"}
-              </Button>
+        {photoURL ? (
+          <Image
+            src={photoURL}
+            alt="Product"
+            w="full"
+            h="48"
+            objectFit="cover"
+            borderRadius="lg"
+            mb={3}
+          />
+        ) : (
+          <Center
+            w="full"
+            h="48"
+            bg="gray.800"
+            borderRadius="lg"
+            mb={3}
+          >
+            <Text>No photo yet</Text>
+          </Center>
+        )}
 
-              <Button
-                as="label"
-                colorScheme="yellow"
-                w="full"
-                cursor="pointer"
-                isDisabled={uploading}
-              >
-                🖼️ Select File
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={handleFileSelect}
-                />
-              </Button>
+        <VStack spacing={2}>
+          <Button
+            onClick={handleTakePhoto}
+            colorScheme="gold"
+            w="full"
+            isDisabled={uploading}
+          >
+            📷 Take Photo
+          </Button>
 
-              {message && <Text fontSize="sm">{message}</Text>}
-            </VStack>
-          </VStack>
-        </ModalBody>
+          <Button
+            as="label"
+            colorScheme="gold"
+            w="full"
+            cursor="pointer"
+            isDisabled={uploading}
+          >
+            🖼️ Select File
+            <Input
+              type="file"
+              accept="image/*"
+              display="none"
+              onChange={handleFileSelect}
+            />
+          </Button>
 
-        <ModalFooter>
+          {uploading && <Spinner size="sm" color="gold" />}
+
+          {message && <Text fontSize="sm">{message}</Text>}
+
           <Button
             onClick={onClose}
-            colorScheme="gray"
+            variant="outline"
+            borderColor="gold"
+            color="gold"
+            _hover={{ bg: "gold", color: "black" }}
             w="full"
           >
             Close
           </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </VStack>
+      </Box>
+    </Box>
   );
 }
