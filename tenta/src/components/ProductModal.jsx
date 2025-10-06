@@ -1,4 +1,3 @@
-// File: src/components/ProductModal.jsx
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -16,10 +15,16 @@ import {
   VStack,
   Box,
 } from "@chakra-ui/react";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 
 export default function ProductModal({ code, onClose }) {
   const [product, setProduct] = useState(null);
   const [showUploader, setShowUploader] = useState(false);
+  const y = useMotionValue(0);
+
+  // Transform y to create shadow/lift effect
+  const shadow = useTransform(y, [-200, 0, 200], [50, 20, 0]);
+  const scale = useTransform(y, [-200, 0, 200], [1.02, 1, 0.98]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -29,7 +34,7 @@ export default function ProductModal({ code, onClose }) {
         if (snapshot.exists()) setProduct(snapshot.data());
         else setProduct({ id: code, notFound: true });
       } catch (err) {
-        console.error("Error fetching product:", err);
+        console.error(err);
       }
     };
     fetchProduct();
@@ -37,6 +42,21 @@ export default function ProductModal({ code, onClose }) {
 
   if (showUploader)
     return <ProductUploaderModal product={product} onClose={() => setShowUploader(false)} />;
+
+  const PARTIAL_HEIGHT = window.innerHeight * 0.4;
+  const FULL_HEIGHT = 0;
+
+  const snapToHeight = (dragY, velocityY) => {
+    const threshold = window.innerHeight * 0.25;
+
+    if (velocityY > 800 || dragY > PARTIAL_HEIGHT + threshold) {
+      onClose();
+    } else if (dragY < threshold) {
+      animate(y, FULL_HEIGHT, { type: "spring", stiffness: 500, damping: 35 });
+    } else {
+      animate(y, -PARTIAL_HEIGHT, { type: "spring", stiffness: 400, damping: 30 });
+    }
+  };
 
   return (
     <Drawer
@@ -47,30 +67,36 @@ export default function ProductModal({ code, onClose }) {
       autoFocus={false}
       trapFocus={false}
     >
-      <DrawerOverlay bg="blackAlpha.800" />
+      <DrawerOverlay bg="blackAlpha.600" backdropFilter="blur(6px)" />
       <DrawerContent
         borderTopRadius="2xl"
-        maxH="90vh"
-        mt="auto"
         bg="gray.900"
-        color="gold"
+        as={motion.div}
+        style={{ y, boxShadow: shadow, scale }}
+        drag="y"
+        dragConstraints={{ top: -PARTIAL_HEIGHT, bottom: window.innerHeight }}
+        dragElastic={0.2}
+        onDragEnd={(event, info) => snapToHeight(info.point.y, info.velocity.y)}
+        initial={{ y: PARTIAL_HEIGHT }}
+        animate={{ y: -PARTIAL_HEIGHT }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
       >
-        {/* Drag handle */}
         <Box
-          w="12"
-          h="1.5"
-          bg="gray.600"
-          borderRadius="full"
+          w="40px"
+          h="4px"
+          bg="gray.500"
+          borderRadius="2px"
           mx="auto"
-          mt="2"
-          mb="3"
+          mt={2}
+          mb={3}
+          cursor="grab"
         />
 
-        <DrawerHeader textAlign="center">
+        <DrawerHeader borderBottom="1px" borderColor="gray.700" textAlign="center" p={2}>
           {product ? product.description || "Producto" : "Cargando..."}
         </DrawerHeader>
 
-        <DrawerBody overflowY="auto">
+        <DrawerBody>
           {product ? (
             <VStack spacing={3} align="start">
               <Text>
