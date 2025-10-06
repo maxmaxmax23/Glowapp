@@ -1,8 +1,25 @@
-// File: src/components/ImporterModal.jsx
+// INCREMENT: ImporterModal.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Modal layout, buttons, progress
+// Mode: Candidate (test preview before full integration)
+
 import React, { useState } from "react";
-import { collection, doc, setDoc, writeBatch } from "firebase/firestore";
-import { db } from "../firebase.js"; // corrected import
+import { collection, doc, writeBatch } from "firebase/firestore";
+import { db } from "../firebase.js";
 import PropTypes from "prop-types";
+import {
+  Box,
+  VStack,
+  Button,
+  Text,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Progress,
+} from "@chakra-ui/react";
 
 export default function ImporterModal({ queuedData, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -10,7 +27,7 @@ export default function ImporterModal({ queuedData, onClose }) {
 
   const sanitizeId = (id) => {
     if (!id) return "unknown";
-    return id.toString().replace(/[^a-zA-Z0-9]/g, ""); // remove any invalid char
+    return id.toString().replace(/[^a-zA-Z0-9]/g, "");
   };
 
   const handleImport = async () => {
@@ -47,32 +64,49 @@ export default function ImporterModal({ queuedData, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 text-gold rounded-2xl p-4 w-full max-w-md flex flex-col">
-        <h2 className="text-xl font-bold mb-3">Importar Productos</h2>
+    <Modal isOpen onClose={onClose} isCentered size="md" motionPreset="scale">
+      <ModalOverlay bg="blackAlpha.800" />
+      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
+        <ModalHeader textAlign="center">Importar Productos</ModalHeader>
+        <ModalBody>
+          <VStack spacing={4}>
+            <Button
+              colorScheme="gold"
+              w="full"
+              onClick={handleImport}
+              isLoading={loading}
+            >
+              {loading ? "Importando..." : "Importar datos a Firebase"}
+            </Button>
 
-        <button
-          onClick={handleImport}
-          disabled={loading}
-          className="bg-gold text-black py-2 rounded mb-4 font-semibold"
-        >
-          {loading ? "Importando..." : "Importar datos a Firebase"}
-        </button>
-
-        {progress.total > 0 && (
-          <p className="text-sm">
-            Escritos: {progress.written} / {progress.total}
-          </p>
-        )}
-
-        <button
-          onClick={onClose}
-          className="mt-4 bg-gray-700 text-gold py-2 rounded hover:bg-gray-600"
-        >
-          Cerrar
-        </button>
-      </div>
-    </div>
+            {progress.total > 0 && (
+              <Box w="full">
+                <Progress
+                  value={(progress.written / progress.total) * 100}
+                  colorScheme="gold"
+                  size="sm"
+                  mb={2}
+                />
+                <Text fontSize="sm" textAlign="center">
+                  Escritos: {progress.written} / {progress.total}
+                </Text>
+              </Box>
+            )}
+          </VStack>
+        </ModalBody>
+        <ModalFooter justifyContent="center">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            color="gold"
+            borderColor="gold"
+            _hover={{ bg: "gold", color: "black" }}
+          >
+            Cerrar
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }
 
