@@ -1,18 +1,33 @@
 // INCREMENT: App.jsx Chakra UI Root Layout
 // Type: UI Migration
-// Scope: Root container, Flex layout, preserve existing logic
+// Scope: Root container layout using Chakra Flex
 // Mode: Candidate (test before full integration)
 
-import React from "react";
-import { Flex, Box } from "@chakra-ui/react";
-import ScannerModal from "./components/ScannerModal";
-import ProductUploaderModal from "./components/ProductUploaderModal";
-import "./App.css"; // Keep existing styles
+import React, { useState } from "react";
+import { Flex, Box } from "@chakra-ui/react"; // Chakra components
+import LoginForm from "./components/LoginForm.jsx";
+import Dashboard from "./components/Dashboard.jsx";
+import ScannerModal from "./components/ScannerModal.jsx";
+import ProductModal from "./components/ProductModal.jsx";
+import ImporterModal from "./components/ImporterModal.jsx";
+import MergerModal from "./components/MergerModal.jsx";
 
-function App() {
-  // Existing state and logic untouched
-  const [scannerOpen, setScannerOpen] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = React.useState(null);
+export default function App() {
+  const [user, setUser] = useState(null); // keep existing auth flow
+  const [scannedCode, setScannedCode] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showImporter, setShowImporter] = useState(false);
+  const [showMerger, setShowMerger] = useState(false);
+  const [firebaseWrites, setFirebaseWrites] = useState(0);
+
+  const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
+
+  // Called when scanner or manual selection returns a productId
+  const handleScanSelect = (productId) => {
+    if (!productId) return;
+    setScannedCode(productId);
+    setShowScanner(false);
+  };
 
   return (
     <Flex
@@ -22,36 +37,41 @@ function App() {
       bg="black"
       color="gold"
       align="center"
-      justify="flex-start"
+      justify="center"
       p={4}
     >
-      {/* Main App content */}
-      <Box w="full" maxW="400px">
-        {/* Your existing app content can stay here */}
-        <button
-          className="scanner-button"
-          onClick={() => setScannerOpen(true)}
-        >
-          Open Scanner
-        </button>
-      </Box>
+      {!user ? (
+        <LoginForm onLogin={setUser} />
+      ) : scannedCode ? (
+        <ProductModal code={scannedCode} onClose={() => setScannedCode(null)} />
+      ) : (
+        <>
+          <Dashboard
+            onScan={() => setShowScanner(true)}
+            onOpenImporter={() => setShowImporter(true)}
+            onOpenMerger={() => setShowMerger(true)}
+            firebaseWrites={firebaseWrites}
+          />
 
-      {/* Scanner Modal */}
-      <ScannerModal
-        isOpen={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        setSelectedProduct={setSelectedProduct}
-      />
+          {showScanner && (
+            <ScannerModal
+              onClose={() => setShowScanner(false)}
+              onSelect={handleScanSelect}
+            />
+          )}
 
-      {/* Product Uploader Modal */}
-      {selectedProduct && (
-        <ProductUploaderModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-        />
+          {showImporter && (
+            <ImporterModal
+              onClose={() => setShowImporter(false)}
+              incrementWrites={incrementWrites}
+            />
+          )}
+
+          {showMerger && (
+            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => {}} />
+          )}
+        </>
       )}
     </Flex>
   );
 }
-
-export default App;
