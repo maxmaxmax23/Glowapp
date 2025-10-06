@@ -1,16 +1,28 @@
+// INCREMENT: ScannerModal.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Modal, layout, buttons, inputs, scrollable list
+// Mode: Candidate (test preview before full integration)
+
 import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import ProductUploaderModal from "./ProductUploaderModal.jsx";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
-
-/**
- * ScannerModal.jsx
- * - Manual search + scanner toggle
- * - Looks up Firestore products by productId or barcode
- * - Shows multiple matches (scrollable)
- * - Opens ProductUploaderModal for selected match
- */
+import {
+  Box,
+  Flex,
+  Input,
+  Button,
+  VStack,
+  Text,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ScrollView,
+} from "@chakra-ui/react";
 
 export default function ScannerModal({ onClose }) {
   const readerRef = useRef(null);
@@ -20,7 +32,6 @@ export default function ScannerModal({ onClose }) {
   const [scannerKey, setScannerKey] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
 
-  // 🔍 Search Firestore for matches by productId or barcodes[]
   const handleSearch = async (term) => {
     if (!term || term.trim() === "") {
       setMatches([]);
@@ -51,7 +62,6 @@ export default function ScannerModal({ onClose }) {
     }
   };
 
-  // 📷 Scanner setup
   useEffect(() => {
     if (!readerRef.current || !isScanning) return;
 
@@ -85,73 +95,91 @@ export default function ScannerModal({ onClose }) {
     setManualSearch("");
   };
 
-  // --- RENDER ---
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center p-4 z-50">
-      {!scanResult ? (
-        <div className="w-full max-w-md flex flex-col gap-3 bg-gray-900 text-gold rounded-2xl p-4">
-          <h2 className="text-xl font-bold mb-2 text-center">
-            Buscar / Escanear Producto
-          </h2>
+    <Modal isOpen onClose={onClose} size="lg" isCentered motionPreset="slideInBottom">
+      <ModalOverlay bg="blackAlpha.800" />
+      <ModalContent bg="gray.900" color="gold" borderRadius="2xl" p={4}>
+        {!scanResult ? (
+          <>
+            <ModalHeader textAlign="center">Buscar / Escanear Producto</ModalHeader>
 
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={manualSearch}
-              onChange={(e) => {
-                setManualSearch(e.target.value);
-                handleSearch(e.target.value);
-              }}
-              placeholder="Buscar por ID, código o descripción..."
-              className="flex-1 p-2 rounded bg-black text-white border border-gold text-sm"
-            />
-            <button
-              onClick={() => setIsScanning((prev) => !prev)}
-              className="bg-gold text-black px-3 rounded text-sm font-semibold"
-            >
-              {isScanning ? "Detener" : "Escanear"}
-            </button>
-          </div>
-
-          {isScanning && (
-            <div
-              key={scannerKey}
-              ref={readerRef}
-              id="reader"
-              className="w-full h-64 bg-black border border-gold rounded-lg overflow-hidden mt-2"
-            ></div>
-          )}
-
-          {matches.length > 0 && (
-            <div className="overflow-y-auto max-h-64 mt-3 border border-gold rounded">
-              {matches.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-2 border-b border-gray-800 hover:bg-gray-800 cursor-pointer"
-                  onClick={() => openProduct(item)}
+            <ModalBody>
+              <Flex gap={2} mb={3}>
+                <Input
+                  placeholder="Buscar por ID, código o descripción..."
+                  value={manualSearch}
+                  onChange={(e) => {
+                    setManualSearch(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  bg="black"
+                  color="white"
+                  borderColor="gold"
+                  size="sm"
+                />
+                <Button
+                  onClick={() => setIsScanning((prev) => !prev)}
+                  colorScheme="gold"
+                  size="sm"
                 >
-                  <p className="text-sm font-bold text-gold">{item.id}</p>
-                  <p className="text-xs text-gray-300">
-                    Códigos: {item.barcodes?.join(", ")}
-                  </p>
-                  <p className="text-xs text-gray-400 italic truncate">
-                    {item.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+                  {isScanning ? "Detener" : "Escanear"}
+                </Button>
+              </Flex>
 
-          <button
-            onClick={onClose}
-            className="mt-3 bg-gray-700 text-gold py-2 rounded hover:bg-gray-600"
-          >
-            Cerrar
-          </button>
-        </div>
-      ) : (
-        <ProductUploaderModal product={scanResult} onClose={resetScanner} />
-      )}
-    </div>
+              {isScanning && (
+                <Box
+                  key={scannerKey}
+                  ref={readerRef}
+                  id="reader"
+                  w="full"
+                  h="64"
+                  bg="black"
+                  borderWidth="1px"
+                  borderColor="gold"
+                  borderRadius="lg"
+                  overflow="hidden"
+                  mb={3}
+                />
+              )}
+
+              {matches.length > 0 && (
+                <Box maxH="64" overflowY="auto" borderWidth="1px" borderColor="gold" borderRadius="md" mb={3}>
+                  <VStack spacing={1} align="stretch">
+                    {matches.map((item, idx) => (
+                      <Box
+                        key={idx}
+                        p={2}
+                        borderBottomWidth={idx !== matches.length - 1 ? "1px" : 0}
+                        borderBottomColor="gray.700"
+                        _hover={{ bg: "gray.800", cursor: "pointer" }}
+                        onClick={() => openProduct(item)}
+                      >
+                        <Text fontSize="sm" fontWeight="bold" color="gold">
+                          {item.id}
+                        </Text>
+                        <Text fontSize="xs" color="gray.300">
+                          Códigos: {item.barcodes?.join(", ")}
+                        </Text>
+                        <Text fontSize="xs" color="gray.400" fontStyle="italic" isTruncated>
+                          {item.description}
+                        </Text>
+                      </Box>
+                    ))}
+                  </VStack>
+                </Box>
+              )}
+            </ModalBody>
+
+            <ModalFooter justifyContent="center">
+              <Button onClick={onClose} colorScheme="gray">
+                Cerrar
+              </Button>
+            </ModalFooter>
+          </>
+        ) : (
+          <ProductUploaderModal product={scanResult} onClose={resetScanner} />
+        )}
+      </ModalContent>
+    </Modal>
   );
 }
