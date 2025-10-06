@@ -1,22 +1,38 @@
+// INCREMENT: ProductUploaderModal.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Modal layout, buttons, image preview, messages
+// Mode: Candidate (test preview before full integration)
+
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
+import {
+  Box,
+  Flex,
+  Button,
+  Image,
+  Text,
+  VStack,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@chakra-ui/react";
 
 export default function ProductUploaderModal({ product, onClose }) {
   const [photoURL, setPhotoURL] = useState("");
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Safety check: don’t render if product not loaded yet
   if (!product) return null;
 
-  // Load existing photo from Firestore on mount
   useEffect(() => {
     if (product.photoURL) {
       setPhotoURL(product.photoURL);
     } else {
-      // Attempt to retrieve it directly from Storage (optional)
       const tryFetchExisting = async () => {
         try {
           const fileRef = ref(storage, `images/${product.id}.jpg`);
@@ -53,17 +69,13 @@ export default function ProductUploaderModal({ product, onClose }) {
     }
   };
 
-  //  Use consistent folder name — match your Firebase Storage rules ("images/")
   const uploadImage = async (file) => {
     try {
       setUploading(true);
       const fileRef = ref(storage, `images/${product.id}.jpg`);
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
-
-      // Update product document with new photoURL
       await updateDoc(doc(db, "products", product.id), { photoURL: url });
-
       setPhotoURL(url);
       setMessage("✅ Photo uploaded successfully.");
     } catch (err) {
@@ -75,52 +87,77 @@ export default function ProductUploaderModal({ product, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center p-4 text-gold">
-      <div className="w-full max-w-md bg-zinc-900 border border-gold rounded-xl p-4 text-center">
-        <h2 className="text-xl font-bold mb-4">{product.description}</h2>
-
-        {photoURL ? (
-          <img
-            src={photoURL}
-            alt="Product"
-            className="w-full h-48 object-cover rounded-lg mb-3"
-          />
-        ) : (
-          <div className="w-full h-48 bg-zinc-800 rounded-lg flex items-center justify-center mb-3">
-            No photo yet
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={handleTakePhoto}
-            className="bg-gold text-black py-2 rounded hover:opacity-80"
-            disabled={uploading}
-          >
-            📷 Take Photo
-          </button>
-
-          <label className="bg-gold text-black py-2 rounded hover:opacity-80 cursor-pointer">
-            🖼️ Select File
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileSelect}
-              disabled={uploading}
+    <Modal isOpen onClose={onClose} size="md" isCentered motionPreset="scale">
+      <ModalOverlay bg="blackAlpha.800" />
+      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
+        <ModalHeader textAlign="center">{product.description}</ModalHeader>
+        <ModalBody>
+          {photoURL ? (
+            <Image
+              src={photoURL}
+              alt="Product"
+              w="full"
+              h="48"
+              objectFit="cover"
+              borderRadius="lg"
+              mb={3}
             />
-          </label>
+          ) : (
+            <Flex
+              w="full"
+              h="48"
+              bg="gray.800"
+              borderRadius="lg"
+              align="center"
+              justify="center"
+              mb={3}
+            >
+              <Text>No photo yet</Text>
+            </Flex>
+          )}
 
-          {message && <p className="mt-2 text-sm">{message}</p>}
+          <VStack spacing={2}>
+            <Button
+              onClick={handleTakePhoto}
+              colorScheme="gold"
+              w="full"
+              isDisabled={uploading}
+            >
+              📷 Take Photo
+            </Button>
 
-          <button
+            <Button
+              as="label"
+              colorScheme="gold"
+              w="full"
+              cursor="pointer"
+              isDisabled={uploading}
+            >
+              🖼️ Select File
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleFileSelect}
+              />
+            </Button>
+
+            {message && <Text fontSize="sm">{message}</Text>}
+          </VStack>
+        </ModalBody>
+
+        <ModalFooter justifyContent="center">
+          <Button
             onClick={onClose}
-            className="mt-3 bg-transparent border border-gold py-2 rounded hover:bg-gold hover:text-black"
+            variant="outline"
+            borderColor="gold"
+            color="gold"
+            _hover={{ bg: "gold", color: "black" }}
           >
             Close
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
   );
 }
