@@ -15,12 +15,16 @@ import {
   VStack,
   Box,
 } from "@chakra-ui/react";
-import { motion, useMotionValue, animate } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 
 export default function ProductModal({ code, onClose }) {
   const [product, setProduct] = useState(null);
   const [showUploader, setShowUploader] = useState(false);
   const y = useMotionValue(0);
+
+  // Transform y to create shadow/lift effect
+  const shadow = useTransform(y, [-200, 0, 200], [50, 20, 0]);
+  const scale = useTransform(y, [-200, 0, 200], [1.02, 1, 0.98]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -45,14 +49,11 @@ export default function ProductModal({ code, onClose }) {
   const snapToHeight = (dragY, velocityY) => {
     const threshold = window.innerHeight * 0.25;
 
-    // If swipe down is fast enough, close immediately
     if (velocityY > 800 || dragY > PARTIAL_HEIGHT + threshold) {
       onClose();
     } else if (dragY < threshold) {
-      // fully open
       animate(y, FULL_HEIGHT, { type: "spring", stiffness: 500, damping: 35 });
     } else {
-      // snap to partial
       animate(y, -PARTIAL_HEIGHT, { type: "spring", stiffness: 400, damping: 30 });
     }
   };
@@ -66,15 +67,12 @@ export default function ProductModal({ code, onClose }) {
       autoFocus={false}
       trapFocus={false}
     >
-      <DrawerOverlay
-        bg="blackAlpha.600"
-        backdropFilter="blur(6px)"
-      />
+      <DrawerOverlay bg="blackAlpha.600" backdropFilter="blur(6px)" />
       <DrawerContent
         borderTopRadius="2xl"
         bg="gray.900"
         as={motion.div}
-        style={{ y }}
+        style={{ y, boxShadow: shadow, scale }}
         drag="y"
         dragConstraints={{ top: -PARTIAL_HEIGHT, bottom: window.innerHeight }}
         dragElastic={0.2}
