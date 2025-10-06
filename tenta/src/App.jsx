@@ -17,8 +17,14 @@ export default function App() {
 
   const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
 
+  const handleScanSelect = (productId) => {
+    if (!productId) return;
+    setScannedCode(productId);
+    setShowScanner(false);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-gold flex items-center justify-center">
+    <div className="min-h-screen bg-black text-gold flex flex-col p-2">
       {!user ? (
         <LoginForm onLogin={setUser} />
       ) : scannedCode ? (
@@ -35,14 +41,14 @@ export default function App() {
           {showScanner && (
             <ScannerModal
               onClose={() => setShowScanner(false)}
-              onSelectProduct={(productId) => setScannedCode(productId)}
+              onSelect={handleScanSelect}
             />
           )}
 
           {showImporter && (
             <ImporterModal
               onClose={() => setShowImporter(false)}
-              queuedData={[]}
+              incrementWrites={incrementWrites}
             />
           )}
 
