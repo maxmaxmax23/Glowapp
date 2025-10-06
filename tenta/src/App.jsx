@@ -1,6 +1,5 @@
 // File: src/App.jsx
 import React, { useState } from "react";
-import { Box } from "@chakra-ui/react";
 import LoginForm from "./components/LoginForm.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import ScannerModal from "./components/ScannerModal.jsx";
@@ -26,22 +25,15 @@ export default function App() {
   };
 
   return (
-    <Box
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"  // vertically center content
-      alignItems="center"      // horizontally center content
-      px={{ base: 4, md: 8 }}
-      py={{ base: 4, md: 8 }}
-      bg="gray.900"
-      color="gold"
-      w="full"
-      maxW="600px"             // constrain max width
-      mx="auto"                // horizontally center
-      minH="100vh"             // allow full height scroll
-    >
+    <div className="min-h-screen bg-black text-gold relative">
+      {/* Login form centered only if no user */}
       {!user ? (
-        <LoginForm onLogin={setUser} />
+        <div className="flex items-center justify-center min-h-screen">
+          <LoginForm onLogin={setUser} />
+        </div>
+      ) : scannedCode ? (
+        // ProductModal drawer opens on top automatically
+        <ProductModal code={scannedCode} onClose={() => setScannedCode(null)} />
       ) : (
         <>
           <Dashboard
@@ -61,7 +53,7 @@ export default function App() {
           {showImporter && (
             <ImporterModal
               onClose={() => setShowImporter(false)}
-              queuedData={[]} // pass your queued data here
+              incrementWrites={incrementWrites}
             />
           )}
 
@@ -71,15 +63,8 @@ export default function App() {
               addToQueue={() => {}}
             />
           )}
-
-          {scannedCode && (
-            <ProductModal
-              code={scannedCode}
-              onClose={() => setScannedCode(null)}
-            />
-          )}
         </>
       )}
-    </Box>
+    </div>
   );
 }
