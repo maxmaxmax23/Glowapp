@@ -1,0 +1,32 @@
+[
+    {
+    "Codigo": "7796611961566",
+    "Articulo": "NA10361",
+    "Barra": "7798040802151",
+    "Desc": "RUBOR COMPACTO",
+    "L. de precio": "LISTA1",
+    "Descripción": "PUBLICO",
+    "Vigencia": " 7\/7\/23",
+    "Precio": 800
+   },
+   {
+    "Codigo": "7796611961573",
+    "Articulo": "NA10362",
+    "Barra": "7798040802175",
+    "Desc": "CORRECTOR TEJAR",
+    "L. de precio": "LISTA1",
+    "Descripción": "PUBLICO",
+    "Vigencia": " 10\/10\/23",
+    "Precio": 800
+   },
+   {
+    "Codigo": "7796611961580",
+    "Articulo": "NA20030",
+    "Barra": "tentacionesdeco",
+    "Desc": "CORRECTOR DE OJERAS",
+    "L. de precio": "LISTA1",
+    "Descripción": "PUBLICO",
+    "Vigencia": " 10\/3\/23",
+    "Precio": 390
+   }
+]
