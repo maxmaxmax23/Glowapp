@@ -1,37 +1,38 @@
-// File: src/components/Dashboard.jsx
+// INCREMENT: Dashboard.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Layout and buttons using Chakra
+// Mode: Candidate (test in preview before integration)
+
 import React from "react";
+import { Flex, VStack, Button, Text, Box } from "@chakra-ui/react";
 
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
   return (
-    <div className="p-4 w-full max-w-lg mx-auto flex flex-col gap-4">
-      <h1 className="text-2xl font-bold text-gold mb-4 text-center">Dashboardd</h1>
+    <Flex direction="column" w="full" maxW="lg" mx="auto" p={4} gap={4}>
+      {/* Title */}
+      <Text fontSize="2xl" fontWeight="bold" color="gold" textAlign="center" mb={4}>
+        Dashboardd
+      </Text>
 
-      <div className="flex flex-col gap-3">
-        <button
-          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
-          onClick={onScan}
-        >
+      {/* Action Buttons */}
+      <VStack spacing={3} w="full">
+        <Button colorScheme="gold" w="full" onClick={onScan}>
           Escanear Producto
-        </button>
+        </Button>
 
-        <button
-          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
-          onClick={onOpenImporter}
-        >
+        <Button colorScheme="gold" w="full" onClick={onOpenImporter}>
           Importar JSON
-        </button>
+        </Button>
 
-        <button
-          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
-          onClick={onOpenMerger}
-        >
+        <Button colorScheme="gold" w="full" onClick={onOpenMerger}>
           Combinar Archivos Excel
-        </button>
-      </div>
+        </Button>
+      </VStack>
 
-      <div className="mt-6 text-gold text-center">
-        <p>Escrituras en Firebase: {firebaseWrites}</p>
-      </div>
-    </div>
+      {/* Firebase Writes */}
+      <Box mt={6} w="full" textAlign="center">
+        <Text color="gold">Escrituras en Firebase: {firebaseWrites}</Text>
+      </Box>
+    </Flex>
   );
 }
