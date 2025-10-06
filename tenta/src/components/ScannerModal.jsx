@@ -1,7 +1,7 @@
 // INCREMENT: ScannerModal.jsx Chakra UI Migration
 // Type: UI Migration
-// Scope: Modal, layout, buttons, inputs, scrollable list
-// Mode: Candidate (test preview before full integration)
+// Scope: Modal layout, inputs, buttons, scrollable match list
+// Mode: Candidate (test preview before integration)
 
 import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
@@ -10,10 +10,10 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
 import {
   Box,
-  Flex,
-  Input,
   Button,
+  Input,
   VStack,
+  HStack,
   Text,
   Modal,
   ModalOverlay,
@@ -21,6 +21,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  Divider,
   ScrollView,
 } from "@chakra-ui/react";
 
@@ -95,90 +96,90 @@ export default function ScannerModal({ onClose }) {
     setManualSearch("");
   };
 
+  if (scanResult)
+    return <ProductUploaderModal product={scanResult} onClose={resetScanner} />;
+
   return (
-    <Modal isOpen onClose={onClose} size="lg" isCentered motionPreset="slideInBottom">
+    <Modal isOpen={true} onClose={onClose} size="md" isCentered>
       <ModalOverlay bg="blackAlpha.800" />
-      <ModalContent bg="gray.900" color="gold" borderRadius="2xl" p={4}>
-        {!scanResult ? (
-          <>
-            <ModalHeader textAlign="center">Buscar / Escanear Producto</ModalHeader>
-
-            <ModalBody>
-              <Flex gap={2} mb={3}>
-                <Input
-                  placeholder="Buscar por ID, código o descripción..."
-                  value={manualSearch}
-                  onChange={(e) => {
-                    setManualSearch(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  bg="black"
-                  color="white"
-                  borderColor="gold"
-                  size="sm"
-                />
-                <Button
-                  onClick={() => setIsScanning((prev) => !prev)}
-                  colorScheme="gold"
-                  size="sm"
-                >
-                  {isScanning ? "Detener" : "Escanear"}
-                </Button>
-              </Flex>
-
-              {isScanning && (
-                <Box
-                  key={scannerKey}
-                  ref={readerRef}
-                  id="reader"
-                  w="full"
-                  h="64"
-                  bg="black"
-                  borderWidth="1px"
-                  borderColor="gold"
-                  borderRadius="lg"
-                  overflow="hidden"
-                  mb={3}
-                />
-              )}
-
-              {matches.length > 0 && (
-                <Box maxH="64" overflowY="auto" borderWidth="1px" borderColor="gold" borderRadius="md" mb={3}>
-                  <VStack spacing={1} align="stretch">
-                    {matches.map((item, idx) => (
-                      <Box
-                        key={idx}
-                        p={2}
-                        borderBottomWidth={idx !== matches.length - 1 ? "1px" : 0}
-                        borderBottomColor="gray.700"
-                        _hover={{ bg: "gray.800", cursor: "pointer" }}
-                        onClick={() => openProduct(item)}
-                      >
-                        <Text fontSize="sm" fontWeight="bold" color="gold">
-                          {item.id}
-                        </Text>
-                        <Text fontSize="xs" color="gray.300">
-                          Códigos: {item.barcodes?.join(", ")}
-                        </Text>
-                        <Text fontSize="xs" color="gray.400" fontStyle="italic" isTruncated>
-                          {item.description}
-                        </Text>
-                      </Box>
-                    ))}
-                  </VStack>
-                </Box>
-              )}
-            </ModalBody>
-
-            <ModalFooter justifyContent="center">
-              <Button onClick={onClose} colorScheme="gray">
-                Cerrar
+      <ModalContent bg="gray.900" color="gold" rounded="2xl">
+        <ModalHeader textAlign="center">Buscar / Escanear Producto</ModalHeader>
+        <ModalBody>
+          <VStack spacing={3}>
+            <HStack w="full">
+              <Input
+                value={manualSearch}
+                onChange={(e) => {
+                  setManualSearch(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                placeholder="Buscar por ID, código o descripción..."
+                bg="black"
+                color="white"
+                size="sm"
+              />
+              <Button
+                onClick={() => setIsScanning((prev) => !prev)}
+                colorScheme="yellow"
+                size="sm"
+              >
+                {isScanning ? "Detener" : "Escanear"}
               </Button>
-            </ModalFooter>
-          </>
-        ) : (
-          <ProductUploaderModal product={scanResult} onClose={resetScanner} />
-        )}
+            </HStack>
+
+            {isScanning && (
+              <Box
+                key={scannerKey}
+                ref={readerRef}
+                id="reader"
+                w="full"
+                h="64"
+                bg="black"
+                border="1px solid gold"
+                rounded="md"
+                overflow="hidden"
+              />
+            )}
+
+            {matches.length > 0 && (
+              <Box
+                maxH="64"
+                overflowY="auto"
+                w="full"
+                border="1px solid gold"
+                rounded="md"
+              >
+                <VStack spacing={1} align="stretch">
+                  {matches.map((item, idx) => (
+                    <Box
+                      key={idx}
+                      p={2}
+                      borderBottom="1px solid gray"
+                      _hover={{ bg: "gray.800", cursor: "pointer" }}
+                      onClick={() => openProduct(item)}
+                    >
+                      <Text fontSize="sm" fontWeight="bold" color="gold">
+                        {item.id}
+                      </Text>
+                      <Text fontSize="xs" color="gray.300">
+                        Códigos: {item.barcodes?.join(", ")}
+                      </Text>
+                      <Text fontSize="xs" color="gray.400" isTruncated>
+                        {item.description}
+                      </Text>
+                    </Box>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+          </VStack>
+        </ModalBody>
+
+        <ModalFooter>
+          <Button onClick={onClose} colorScheme="gray">
+            Cerrar
+          </Button>
+        </ModalFooter>
       </ModalContent>
     </Modal>
   );

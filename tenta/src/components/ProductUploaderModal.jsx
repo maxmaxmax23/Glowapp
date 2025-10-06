@@ -1,25 +1,25 @@
 // INCREMENT: ProductUploaderModal.jsx Chakra UI Migration
 // Type: UI Migration
-// Scope: Modal layout, buttons, image preview, messages
-// Mode: Candidate (test preview before full integration)
+// Scope: Modal layout, image preview, buttons
+// Mode: Candidate (test preview before integration)
 
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
 import {
-  Box,
-  Flex,
-  Button,
-  Image,
-  Text,
-  VStack,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
+  Box,
+  Button,
+  Image,
+  VStack,
+  Text,
+  Spinner,
 } from "@chakra-ui/react";
 
 export default function ProductUploaderModal({ product, onClose }) {
@@ -39,7 +39,7 @@ export default function ProductUploaderModal({ product, onClose }) {
           const url = await getDownloadURL(fileRef);
           setPhotoURL(url);
         } catch {
-          // no existing image found — silently ignore
+          // no existing image found
         }
       };
       tryFetchExisting();
@@ -87,72 +87,71 @@ export default function ProductUploaderModal({ product, onClose }) {
   };
 
   return (
-    <Modal isOpen onClose={onClose} size="md" isCentered motionPreset="scale">
+    <Modal isOpen={true} onClose={onClose} size="md" isCentered>
       <ModalOverlay bg="blackAlpha.800" />
-      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
+      <ModalContent bg="gray.900" color="gold" rounded="2xl">
         <ModalHeader textAlign="center">{product.description}</ModalHeader>
         <ModalBody>
-          {photoURL ? (
-            <Image
-              src={photoURL}
-              alt="Product"
-              w="full"
-              h="48"
-              objectFit="cover"
-              borderRadius="lg"
-              mb={3}
-            />
-          ) : (
-            <Flex
-              w="full"
-              h="48"
-              bg="gray.800"
-              borderRadius="lg"
-              align="center"
-              justify="center"
-              mb={3}
-            >
-              <Text>No photo yet</Text>
-            </Flex>
-          )}
-
-          <VStack spacing={2}>
-            <Button
-              onClick={handleTakePhoto}
-              colorScheme="gold"
-              w="full"
-              isDisabled={uploading}
-            >
-              📷 Take Photo
-            </Button>
-
-            <Button
-              as="label"
-              colorScheme="gold"
-              w="full"
-              cursor="pointer"
-              isDisabled={uploading}
-            >
-              🖼️ Select File
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={handleFileSelect}
+          <VStack spacing={3}>
+            {photoURL ? (
+              <Image
+                src={photoURL}
+                alt="Product"
+                w="full"
+                h="48"
+                objectFit="cover"
+                borderRadius="md"
               />
-            </Button>
+            ) : (
+              <Box
+                w="full"
+                h="48"
+                bg="gray.800"
+                rounded="md"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+              >
+                <Text>No photo yet</Text>
+              </Box>
+            )}
 
-            {message && <Text fontSize="sm">{message}</Text>}
+            <VStack spacing={2} w="full">
+              <Button
+                onClick={handleTakePhoto}
+                colorScheme="yellow"
+                w="full"
+                isDisabled={uploading}
+              >
+                {uploading ? <Spinner size="sm" /> : "📷 Take Photo"}
+              </Button>
+
+              <Button
+                as="label"
+                colorScheme="yellow"
+                w="full"
+                cursor="pointer"
+                isDisabled={uploading}
+              >
+                🖼️ Select File
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={handleFileSelect}
+                />
+              </Button>
+
+              {message && <Text fontSize="sm">{message}</Text>}
+            </VStack>
           </VStack>
         </ModalBody>
 
-        <ModalFooter justifyContent="center">
+        <ModalFooter>
           <Button
             onClick={onClose}
-            variant="outline"
-            borderColor="gold"
-            color="gold"
-            _hover={{ bg: "gold", color: "black" }}
+            colorScheme="gray"
+            w="full"
           >
             Close
           </Button>
