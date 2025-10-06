@@ -4,29 +4,25 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import ProductUploaderModal from "./ProductUploaderModal.jsx";
 import {
-  Modal,
-  ModalOverlay,
-  ModalBody,
-  ModalFooter,
+  Drawer,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
   Button,
-  Image,
   Text,
   VStack,
+  Image,
   Box,
-  useMediaQuery,
+  useBreakpointValue,
 } from "@chakra-ui/react";
-import { motion, AnimatePresence } from "framer-motion";
-
-const MotionModalContent = motion.div;
 
 export default function ProductModal({ code, onClose }) {
   const [product, setProduct] = useState(null);
   const [showUploader, setShowUploader] = useState(false);
 
-  const [isWide] = useMediaQuery("(min-width: 768px)");
-  const isMobile = !isWide || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-  const [dragY, setDragY] = useState(0);
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -45,101 +41,65 @@ export default function ProductModal({ code, onClose }) {
   if (showUploader)
     return <ProductUploaderModal product={product} onClose={() => setShowUploader(false)} />;
 
-  if (!isMobile) {
-    // Desktop: normal Chakra modal
-    return (
-      <Modal isOpen onClose={onClose} isCentered size="md">
-        <ModalOverlay bg="blackAlpha.800" />
-        <MotionModalContent
-          style={{ background: "#1a202c", color: "gold", borderRadius: "xl", padding: "16px" }}
-        >
-          <VStack spacing={3} align="start">
-            <Text fontWeight="bold">{product?.description || "Producto"}</Text>
+  const DrawerContentInner = (
+    <>
+      {/* Drag Handle */}
+      {isMobile && (
+        <Box w="40px" h="4px" bg="gray.500" borderRadius="full" mx="auto" my={2} />
+      )}
+
+      <DrawerHeader fontFamily="'Distrampler', serif" fontSize="2xl" textAlign="center">
+        {product ? product.description || "Producto" : "Cargando..."}
+      </DrawerHeader>
+      <DrawerBody>
+        {product ? (
+          <VStack spacing={4} align="start" fontFamily="Arial, sans-serif">
             <Text>
               <b>Código:</b> {code}
             </Text>
             <Text>
-              <b>Precio:</b> ${product?.price ?? "Sin precio"}
+              <b>Precio:</b> ${product.price ?? "Sin precio"}
             </Text>
-            {product?.image && (
-              <Image src={product.image} alt={product.description} borderRadius="md" w="full" />
+            {product.image && (
+              <Image
+                src={product.image}
+                alt={product.description}
+                w="full"
+                borderRadius="lg"
+                objectFit="cover"
+              />
             )}
           </VStack>
-          <ModalFooter justifyContent="space-between">
-            <Button colorScheme="gold" onClick={() => setShowUploader(true)}>
-              Subir imagen
-            </Button>
-            <Button colorScheme="red" onClick={onClose}>
-              Cerrar
-            </Button>
-          </ModalFooter>
-        </MotionModalContent>
-      </Modal>
-    );
-  }
+        ) : (
+          <Text>Cargando...</Text>
+        )}
+      </DrawerBody>
+      {product && (
+        <DrawerFooter justifyContent="space-between">
+          <Button colorScheme="gold" onClick={() => setShowUploader(true)}>
+            Subir imagen
+          </Button>
+          <Button colorScheme="red" onClick={onClose}>
+            Cerrar
+          </Button>
+        </DrawerFooter>
+      )}
+    </>
+  );
 
-  // Mobile: swipeable bottom sheet
-  return (
-    <AnimatePresence>
-      <Modal isOpen onClose={onClose} isCentered={false} size="full" motionPreset="none">
-        <ModalOverlay bg="blackAlpha.800" />
-        <MotionModalContent
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.2}
-          onDrag={(e, info) => setDragY(info.point.y)}
-          onDragEnd={(e, info) => {
-            if (info.point.y > window.innerHeight * 0.25) onClose();
-            setDragY(0);
-          }}
-          style={{
-            y: dragY,
-            background: "#1a202c",
-            color: "gold",
-            borderTopLeftRadius: "24px",
-            borderTopRightRadius: "24px",
-            width: "100%",
-            bottom: 0,
-            position: "absolute",
-            maxHeight: "90vh",
-            padding: "16px",
-          }}
-        >
-          {/* Handle Bar */}
-          <Box
-            w="36px"
-            h="4px"
-            bg="gray.500"
-            borderRadius="2px"
-            mx="auto"
-            mb={3}
-          />
-
-          <VStack spacing={3} align="start">
-            <Text fontWeight="bold" textAlign="center" w="full">
-              {product?.description || "Producto"}
-            </Text>
-            <Text>
-              <b>Código:</b> {code}
-            </Text>
-            <Text>
-              <b>Precio:</b> ${product?.price ?? "Sin precio"}
-            </Text>
-            {product?.image && (
-              <Image src={product.image} alt={product.description} borderRadius="md" w="full" />
-            )}
-          </VStack>
-
-          <ModalFooter justifyContent="space-between">
-            <Button colorScheme="gold" onClick={() => setShowUploader(true)}>
-              Subir imagen
-            </Button>
-            <Button colorScheme="red" onClick={onClose}>
-              Cerrar
-            </Button>
-          </ModalFooter>
-        </MotionModalContent>
-      </Modal>
-    </AnimatePresence>
+  return isMobile ? (
+    <Drawer isOpen placement="bottom" onClose={onClose} size="full">
+      <DrawerOverlay />
+      <DrawerContent bg="gray.900" color="gold" borderTopRadius="2xl">
+        {DrawerContentInner}
+      </DrawerContent>
+    </Drawer>
+  ) : (
+    <Drawer isOpen placement="right" onClose={onClose} size="md">
+      <DrawerOverlay />
+      <DrawerContent bg="gray.900" color="gold" borderLeftRadius="2xl">
+        {DrawerContentInner}
+      </DrawerContent>
+    </Drawer>
   );
 }
