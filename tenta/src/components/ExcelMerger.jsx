@@ -1,6 +1,25 @@
-// File: src/components/ExcelMerger.jsx
+// INCREMENT: ExcelMerger.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Layout, file inputs, buttons, table
+// Mode: Candidate (test preview before full integration)
+
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
+import {
+  Box,
+  VStack,
+  HStack,
+  Button,
+  Input,
+  Text,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  TableContainer,
+} from "@chakra-ui/react";
 
 export default function ExcelMerger() {
   const [equivalenciasFile, setEquivalenciasFile] = useState(null);
@@ -21,12 +40,11 @@ export default function ExcelMerger() {
   };
 
   const parseDate = (str) => {
-    // Normalize DD/MM/YYYY, DD/MM/YY -> YYYY-MM-DD
     if (!str) return null;
     const parts = str.toString().split(/[\/-]/);
     if (parts.length < 3) return null;
     let [day, month, year] = parts.map((p) => parseInt(p, 10));
-    if (year < 100) year += 2000; // handle YY
+    if (year < 100) year += 2000;
     return new Date(year, month - 1, day);
   };
 
@@ -45,24 +63,16 @@ export default function ExcelMerger() {
     setError(null);
 
     try {
-      // Read equivalencias
-      const eqData = XLSX.read(await equivalenciasFile.arrayBuffer(), {
-        type: "array",
-      });
+      const eqData = XLSX.read(await equivalenciasFile.arrayBuffer(), { type: "array" });
       const eqSheet = eqData.Sheets[eqData.SheetNames[0]];
       const eqRows = XLSX.utils.sheet_to_json(eqSheet, { header: 1, raw: false });
-      // Skip header
       const eqMap = {};
       eqRows.slice(1).forEach((row) => {
         const [barcode, productId, desc] = row;
         if (!productId) return;
-        eqMap[productId.toString()] = {
-          barcodes: [barcode.toString()],
-          description: desc,
-        };
+        eqMap[productId.toString()] = { barcodes: [barcode.toString()], description: desc };
       });
 
-      // Read precios
       const prData = XLSX.read(await preciosFile.arrayBuffer(), { type: "array" });
       const prSheet = prData.Sheets[prData.SheetNames[0]];
       const prRows = XLSX.utils.sheet_to_json(prSheet, { header: 1, raw: false });
@@ -94,7 +104,6 @@ export default function ExcelMerger() {
         const barcodes = eqEntry ? eqEntry.barcodes : [];
         const description = desc || (eqEntry ? eqEntry.description : "");
 
-        // For candidate, we assume all products need write
         merged.push({
           productId: productKey,
           barcodes,
@@ -115,57 +124,60 @@ export default function ExcelMerger() {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white rounded-lg">
-      <h2 className="text-lg font-bold mb-2">Excel Merger (Candidate)</h2>
-      <div className="flex flex-col gap-2 mb-4">
-        <label>
-          Equivalencias (barcode → productId):
-          <input type="file" accept=".xls,.xlsx" onChange={(e) => handleFileUpload(e, "equivalencias")} />
-        </label>
-        <label>
-          Precios (productId → details):
-          <input type="file" accept=".xls,.xlsx" onChange={(e) => handleFileUpload(e, "precios")} />
-        </label>
-        <button
-          className="bg-gold text-black px-4 py-2 rounded hover:bg-yellow-400"
-          onClick={mergeFiles}
-        >
+    <Box p={4} bg="gray.900" color="white" borderRadius="lg">
+      <Text fontSize="lg" fontWeight="bold" mb={2}>
+        Excel Merger (Candidate)
+      </Text>
+
+      <VStack spacing={3} mb={4} align="start">
+        <VStack spacing={2} w="full">
+          <Text>Equivalencias (barcode → productId):</Text>
+          <Input type="file" accept=".xls,.xlsx" onChange={(e) => handleFileUpload(e, "equivalencias")} />
+        </VStack>
+        <VStack spacing={2} w="full">
+          <Text>Precios (productId → details):</Text>
+          <Input type="file" accept=".xls,.xlsx" onChange={(e) => handleFileUpload(e, "precios")} />
+        </VStack>
+        <Button colorScheme="gold" onClick={mergeFiles}>
           Merge & Preview
-        </button>
-      </div>
+        </Button>
+      </VStack>
 
-      {error && <div className="text-red-500 mb-2">{error}</div>}
+      {error && <Text color="red.500" mb={2}>{error}</Text>}
 
-      <div className="mb-2">
+      <Text mb={2}>
         <strong>Counters:</strong> To Write: {counters.toWrite}, Skipped: {counters.skipped}, Out of Vigencia: {counters.outOfVigencia}
-      </div>
+      </Text>
 
       {mergedData.length > 0 && (
-        <table className="table-auto border-collapse border border-gray-700 w-full text-sm">
-          <thead>
-            <tr className="bg-gray-800">
-              <th className="border px-2 py-1">Product ID</th>
-              <th className="border px-2 py-1">Barcodes</th>
-              <th className="border px-2 py-1">Description</th>
-              <th className="border px-2 py-1">Price</th>
-              <th className="border px-2 py-1">Vigencia</th>
-              <th className="border px-2 py-1">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mergedData.map((item, idx) => (
-              <tr key={idx} className="even:bg-gray-800">
-                <td className="border px-2 py-1">{item.productId}</td>
-                <td className="border px-2 py-1">{item.barcodes?.join(", ")}</td>
-                <td className="border px-2 py-1">{item.description}</td>
-                <td className="border px-2 py-1">{item.price}</td>
-                <td className="border px-2 py-1">{item.vigencia}</td>
-                <td className="border px-2 py-1">{item.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableContainer maxH="64" overflowY="auto" border="1px" borderColor="gray.700" borderRadius="md">
+          <Table size="sm" variant="simple" colorScheme="gray">
+            <Thead bg="gray.800">
+              <Tr>
+                <Th>Product ID</Th>
+                <Th>Barcodes</Th>
+                <Th>Description</Th>
+                <Th>Price</Th>
+                <Th>Vigencia</Th>
+                <Th>Status</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {mergedData.map((item, idx) => (
+                <Tr key={idx} bg={idx % 2 === 0 ? "gray.800" : undefined}>
+                  <Td>{item.productId}</Td>
+                  <Td>{item.barcodes?.join(", ")}</Td>
+                  <Td>{item.description}</Td>
+                  <Td>{item.price}</Td>
+                  <Td>{item.vigencia}</Td>
+                  <Td>{item.status}</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
       )}
-    </div>
+    </Box>
   );
 }
+s
