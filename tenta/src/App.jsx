@@ -1,73 +1,52 @@
-// File: src/App.jsx
-import React, { useState } from "react";
-import { Box } from "@chakra-ui/react";
-import LoginForm from "./components/LoginForm.jsx";
-import Dashboard from "./components/Dashboard.jsx";
-import ScannerModal from "./components/ScannerModal.jsx";
-import ProductModal from "./components/ProductModal.jsx";
-import ImporterModal from "./components/ImporterModal.jsx";
-import MergerModal from "./components/MergerModal.jsx";
+<Box
+  display="flex"
+  flexDirection="column"
+  justifyContent="center"   // vertical centering
+  alignItems="center"       // horizontal centering
+  px={{ base: 4, md: 8 }}
+  py={{ base: 4, md: 8 }}
+  bg="gray.900"
+  color="gold"
+  w="full"
+  maxW="600px"              // constrain content width
+  mx="auto"                 // center horizontally
+>
+  {!user ? (
+    <LoginForm onLogin={setUser} />
+  ) : (
+    <>
+      <Dashboard
+        onScan={() => setShowScanner(true)}
+        onOpenImporter={() => setShowImporter(true)}
+        onOpenMerger={() => setShowMerger(true)}
+        firebaseWrites={firebaseWrites}
+      />
 
-export default function App() {
-  const [user, setUser] = useState(null); // keep existing auth flow
-  const [scannedCode, setScannedCode] = useState(null);
-  const [showScanner, setShowScanner] = useState(false);
-  const [showImporter, setShowImporter] = useState(false);
-  const [showMerger, setShowMerger] = useState(false);
-  const [firebaseWrites, setFirebaseWrites] = useState(0);
-
-  const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
-
-  const handleScanSelect = (productId) => {
-    if (!productId) return;
-    setScannedCode(productId);
-    setShowScanner(false);
-  };
-
-  return (
-    <Box
-      minH="100vh"
-      display="flex"
-      flexDirection="column"
-      justifyContent={{ base: "flex-start", md: "center" }}
-      alignItems="center"
-      px={4}
-      py={{ base: 4, md: 8 }}
-      bg="gray.900"
-      color="gold"
-    >
-      {!user ? (
-        <LoginForm onLogin={setUser} />
-      ) : scannedCode ? (
-        <ProductModal code={scannedCode} onClose={() => setScannedCode(null)} />
-      ) : (
-        <>
-          <Dashboard
-            onScan={() => setShowScanner(true)}
-            onOpenImporter={() => setShowImporter(true)}
-            onOpenMerger={() => setShowMerger(true)}
-            firebaseWrites={firebaseWrites}
-          />
-
-          {showScanner && (
-            <ScannerModal
-              onClose={() => setShowScanner(false)}
-              onSelect={handleScanSelect}
-            />
-          )}
-
-          {showImporter && (
-            <ImporterModal
-              onClose={() => setShowImporter(false)}
-              queuedData={[]} // pass the queuedData from your workflow
-            />
-          )}
-
-          {showMerger && (
-            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => {}} />
-          )}
-        </>
+      {showScanner && (
+        <ScannerModal
+          onClose={() => setShowScanner(false)}
+          onSelect={handleScanSelect}
+        />
       )}
-    </Box>
-  );
-}
+
+      {showImporter && (
+        <ImporterModal
+          onClose={() => setShowImporter(false)}
+          queuedData={[]} // your workflow data
+        />
+      )}
+
+      {showMerger && (
+        <MergerModal
+          onClose={() => setShowMerger(false)}
+          addToQueue={() => {}}
+        />
+      )}
+
+      <ProductModal
+        code={scannedCode}
+        onClose={() => setScannedCode(null)}
+      />
+    </>
+  )}
+</Box>
