@@ -1,10 +1,5 @@
-// INCREMENT: App.jsx Chakra UI Root Layout
-// Type: UI Migration
-// Scope: Root container layout using Chakra Flex
-// Mode: Candidate (test before full integration)
-
+// File: src/App.jsx
 import React, { useState } from "react";
-import { Flex, Box } from "@chakra-ui/react"; // Chakra components
 import LoginForm from "./components/LoginForm.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import ScannerModal from "./components/ScannerModal.jsx";
@@ -13,7 +8,7 @@ import ImporterModal from "./components/ImporterModal.jsx";
 import MergerModal from "./components/MergerModal.jsx";
 
 export default function App() {
-  const [user, setUser] = useState(null); // keep existing auth flow
+  const [user, setUser] = useState(null);
   const [scannedCode, setScannedCode] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
@@ -22,24 +17,8 @@ export default function App() {
 
   const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
 
-  // Called when scanner or manual selection returns a productId
-  const handleScanSelect = (productId) => {
-    if (!productId) return;
-    setScannedCode(productId);
-    setShowScanner(false);
-  };
-
   return (
-    <Flex
-      direction="column"
-      minH="100vh"
-      w="100%"
-      bg="black"
-      color="gold"
-      align="center"
-      justify="center"
-      p={4}
-    >
+    <div className="min-h-screen bg-black text-gold flex items-center justify-center">
       {!user ? (
         <LoginForm onLogin={setUser} />
       ) : scannedCode ? (
@@ -56,14 +35,14 @@ export default function App() {
           {showScanner && (
             <ScannerModal
               onClose={() => setShowScanner(false)}
-              onSelect={handleScanSelect}
+              onSelectProduct={(productId) => setScannedCode(productId)}
             />
           )}
 
           {showImporter && (
             <ImporterModal
               onClose={() => setShowImporter(false)}
-              incrementWrites={incrementWrites}
+              queuedData={[]}
             />
           )}
 
@@ -72,6 +51,6 @@ export default function App() {
           )}
         </>
       )}
-    </Flex>
+    </div>
   );
 }

@@ -1,7 +1,6 @@
 // File: src/components/ScannerModal.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import ProductUploaderModal from "./ProductUploaderModal.jsx";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
 import {
@@ -17,15 +16,12 @@ import {
   HStack,
   Box,
   Text,
-  Divider,
-  ScrollView,
 } from "@chakra-ui/react";
 
-export default function ScannerModal({ onClose }) {
+export default function ScannerModal({ onClose, onSelectProduct }) {
   const readerRef = useRef(null);
   const [manualSearch, setManualSearch] = useState("");
   const [matches, setMatches] = useState([]);
-  const [scanResult, setScanResult] = useState(null);
   const [scannerKey, setScannerKey] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
 
@@ -46,11 +42,11 @@ export default function ScannerModal({ onClose }) {
           const barcodes = item.barcodes?.map((b) => b.toString().toLowerCase()) || [];
           const description = item.description?.toLowerCase() || "";
 
-          const barcodeMatch = barcodes.some((b) => b.includes(lowerTerm));
-          const productIdMatch = productId.includes(lowerTerm);
-          const descMatch = description.includes(lowerTerm);
-
-          return barcodeMatch || productIdMatch || descMatch;
+          return (
+            productId.includes(lowerTerm) ||
+            barcodes.some((b) => b.includes(lowerTerm)) ||
+            description.includes(lowerTerm)
+          );
         });
 
       setMatches(results);
@@ -82,17 +78,22 @@ export default function ScannerModal({ onClose }) {
     return () => scanner.clear();
   }, [readerRef, scannerKey, isScanning]);
 
-  const openProduct = (product) => setScanResult(product);
+  const handleSelectProduct = (product) => {
+    if (onSelectProduct) {
+      onSelectProduct(product.id); // trigger App.jsx ProductModal
+    }
+    resetScanner();
+  };
 
   const resetScanner = () => {
-    setScanResult(null);
     setScannerKey((k) => k + 1);
     setIsScanning(false);
     setMatches([]);
     setManualSearch("");
+    onClose(); // close the ScannerModal
   };
 
-  return !scanResult ? (
+  return (
     <Modal isOpen onClose={onClose} size="md" scrollBehavior="inside" isCentered>
       <ModalOverlay bg="blackAlpha.800" />
       <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
@@ -144,7 +145,7 @@ export default function ScannerModal({ onClose }) {
                       borderBottom="1px"
                       borderColor="gray.700"
                       _hover={{ bg: "gray.800", cursor: "pointer" }}
-                      onClick={() => openProduct(item)}
+                      onClick={() => handleSelectProduct(item)}
                     >
                       <Text fontWeight="bold" color="gold" fontSize="sm">
                         {item.id}
@@ -174,7 +175,5 @@ export default function ScannerModal({ onClose }) {
         </ModalFooter>
       </ModalContent>
     </Modal>
-  ) : (
-    <ProductUploaderModal product={scanResult} onClose={resetScanner} />
   );
 }
