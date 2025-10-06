@@ -1,7 +1,25 @@
+// INCREMENT: ProductModal.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Modal layout, buttons, image display
+// Mode: Candidate (test preview before full integration)
+
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import ProductUploaderModal from "./ProductUploaderModal.jsx";
+import {
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Image,
+  Text,
+  VStack,
+  Box,
+} from "@chakra-ui/react";
 
 export default function ProductModal({ code, onClose }) {
   const [product, setProduct] = useState(null);
@@ -22,39 +40,51 @@ export default function ProductModal({ code, onClose }) {
   }, [code]);
 
   if (showUploader)
-    return <ProductUploaderModal code={code} onClose={() => setShowUploader(false)} />;
+    return <ProductUploaderModal product={product} onClose={() => setShowUploader(false)} />;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center">
-      <div className="bg-gray-900 p-6 rounded-xl text-white w-96 animate-fadeIn">
-        {product ? (
-          <>
-            <h2 className="text-xl text-gold mb-2">{product.description || "Producto"}</h2>
-            <p>
-              <b>Código:</b> {code}
-            </p>
-            <p>
-              <b>Precio:</b> ${product.price ?? "Sin precio"}
-            </p>
-            {product.image && (
-              <img src={product.image} alt={product.description} className="mt-3 rounded" />
-            )}
-            <div className="flex justify-between mt-4">
-              <button
-                onClick={() => setShowUploader(true)}
-                className="bg-gold text-black px-4 py-2 rounded"
-              >
-                Subir imagen
-              </button>
-              <button onClick={onClose} className="bg-red-500 px-4 py-2 rounded">
-                Cerrar
-              </button>
-            </div>
-          </>
-        ) : (
-          <p>Cargando...</p>
+    <Modal isOpen onClose={onClose} isCentered size="md" motionPreset="scale">
+      <ModalOverlay bg="blackAlpha.800" />
+      <ModalContent bg="gray.900" color="gold" borderRadius="xl" p={4}>
+        <ModalHeader textAlign="center">
+          {product ? product.description || "Producto" : "Cargando..."}
+        </ModalHeader>
+        <ModalBody>
+          {product ? (
+            <VStack spacing={3} align="start">
+              <Text>
+                <b>Código:</b> {code}
+              </Text>
+              <Text>
+                <b>Precio:</b> ${product.price ?? "Sin precio"}
+              </Text>
+
+              {product.image && (
+                <Image
+                  src={product.image}
+                  alt={product.description}
+                  borderRadius="md"
+                  w="full"
+                  objectFit="cover"
+                />
+              )}
+            </VStack>
+          ) : (
+            <Text>Cargando...</Text>
+          )}
+        </ModalBody>
+
+        {product && (
+          <ModalFooter justifyContent="space-between">
+            <Button colorScheme="gold" onClick={() => setShowUploader(true)}>
+              Subir imagen
+            </Button>
+            <Button colorScheme="red" onClick={onClose}>
+              Cerrar
+            </Button>
+          </ModalFooter>
         )}
-      </div>
-    </div>
+      </ModalContent>
+    </Modal>
   );
 }
