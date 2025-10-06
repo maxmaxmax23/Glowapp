@@ -1,6 +1,21 @@
+// INCREMENT: LoginForm.jsx Chakra UI Migration
+// Type: UI Migration
+// Scope: Login form layout, inputs, buttons
+// Mode: Candidate (test preview before integration)
+
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.js";
+import {
+  Box,
+  VStack,
+  FormControl,
+  FormLabel,
+  Input,
+  Button,
+  Text,
+  Heading,
+} from "@chakra-ui/react";
 
 export default function LoginForm({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -18,27 +33,59 @@ export default function LoginForm({ onLogin }) {
   };
 
   return (
-    <div className="bg-gray-900 text-white p-6 rounded-xl shadow-lg w-96 animate-fadeIn">
-      <h2 className="text-2xl mb-4 text-gold">Iniciar sesión</h2>
+    <Box
+      bg="gray.900"
+      color="white"
+      p={6}
+      rounded="xl"
+      shadow="lg"
+      w="96"
+      textAlign="center"
+    >
+      <Heading as="h2" size="lg" mb={4} color="gold">
+        Iniciar sesión
+      </Heading>
+
       <form onSubmit={handleLogin}>
-        <input
-          className="w-full p-2 mb-2 text-black rounded"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          className="w-full p-2 mb-2 text-black rounded"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-        <button className="bg-gold text-black font-bold px-4 py-2 rounded w-full hover:bg-yellow-500">
-          Entrar
-        </button>
+        <VStack spacing={3} align="stretch">
+          <FormControl>
+            <Input
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              bg="white"
+              color="black"
+            />
+          </FormControl>
+
+          <FormControl>
+            <Input
+              type="password"
+              placeholder="Contraseña"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              bg="white"
+              color="black"
+            />
+          </FormControl>
+
+          {error && (
+            <Text color="red.500" fontSize="sm" textAlign="center">
+              {error}
+            </Text>
+          )}
+
+          <Button
+            type="submit"
+            colorScheme="yellow"
+            w="full"
+            fontWeight="bold"
+            _hover={{ bg: "yellow.400" }}
+          >
+            Entrar
+          </Button>
+        </VStack>
       </form>
-    </div>
+    </Box>
   );
 }
