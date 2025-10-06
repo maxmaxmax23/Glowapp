@@ -1,44 +1,60 @@
 // File: src/App.jsx
-import React, { useState } from "react";
-import { ChakraProvider, Box, Center } from "@chakra-ui/react";
+import { useState } from "react";
 import Dashboard from "./components/Dashboard.jsx";
 import ScannerModal from "./components/ScannerModal.jsx";
+import ProductModal from "./components/ProductModal.jsx";
 import ImporterModal from "./components/ImporterModal.jsx";
 import MergerModal from "./components/MergerModal.jsx";
-import ProductModal from "./components/ProductModal.jsx";
 
 export default function App() {
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [importerOpen, setImporterOpen] = useState(false);
-  const [mergerOpen, setMergerOpen] = useState(false);
-  const [queue, setQueue] = useState([]);
-  const [firebaseWrites, setFirebaseWrites] = useState(0);
+  const [showScanner, setShowScanner] = useState(false);
   const [scannedCode, setScannedCode] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [showImporter, setShowImporter] = useState(false);
+  const [showMerger, setShowMerger] = useState(false);
+
+  const handleScanOpen = () => setShowScanner(true);
+  const handleImporterOpen = () => setShowImporter(true);
+  const handleMergerOpen = () => setShowMerger(true);
 
   const addToQueue = (items) => setQueue((prev) => [...prev, ...items]);
 
-  return (
-    <ChakraProvider>
-      <Center minH="100vh" p={4} bg="gray.900">
-        <Box w={{ base: "full", md: "container.md" }}>
-          <Dashboard
-            onScan={() => setScannerOpen(true)}
-            onOpenImporter={() => setImporterOpen(true)}
-            onOpenMerger={() => setMergerOpen(true)}
-            firebaseWrites={firebaseWrites}
-          />
-        </Box>
-      </Center>
+  const handleSelectProduct = (product) => {
+    setScannedCode(product.id);
+    setShowScanner(false);
+  };
 
-      {scannerOpen && <ScannerModal onClose={() => setScannerOpen(false)} setScannedCode={setScannedCode} />}
-      {importerOpen && <ImporterModal queuedData={queue} onClose={() => setImporterOpen(false)} />}
-      {mergerOpen && <MergerModal onClose={() => setMergerOpen(false)} addToQueue={addToQueue} />}
+  // --- RETURN ---
+  return (
+    <>
+      <Dashboard
+        onScan={handleScanOpen}
+        onOpenImporter={handleImporterOpen}
+        onOpenMerger={handleMergerOpen}
+        firebaseWrites={queue.length}
+      />
+
+      {showScanner && (
+        <ScannerModal
+          onClose={() => setShowScanner(false)}
+          onSelectProduct={handleSelectProduct}
+        />
+      )}
+
       {scannedCode && (
         <ProductModal
           code={scannedCode}
           onClose={() => setScannedCode(null)}
         />
       )}
-    </ChakraProvider>
+
+      {showImporter && (
+        <ImporterModal queuedData={queue} onClose={() => setShowImporter(false)} />
+      )}
+
+      {showMerger && (
+        <MergerModal addToQueue={addToQueue} onClose={() => setShowMerger(false)} />
+      )}
+    </>
   );
 }
