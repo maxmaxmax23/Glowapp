@@ -1,39 +1,37 @@
 // File: src/components/Dashboard.jsx
 import React from "react";
-import { VStack, Button, Text, Box } from "@chakra-ui/react";
 
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
   return (
-    <Box
-      p={4}
-      maxW="lg"
-      mx="auto"
-      w="full"
-      display="flex"
-      flexDirection="column"
-      gap={4}
-    >
-      <Text fontSize="2xl" fontWeight="bold" textAlign="center" fontFamily="'Distrampler', serif">
-        Dashboard
-      </Text>
+    <div className="w-full max-w-lg mx-auto p-4 mt-8">
+      <h1 className="text-2xl font-bold text-gold mb-6 text-center">Dashboard</h1>
 
-      <VStack spacing={3} align="stretch">
-        <Button variant="primary" onClick={onScan}>
+      <div className="flex flex-col gap-3 mb-6">
+        <button
+          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
+          onClick={onScan}
+        >
           Escanear Producto
-        </Button>
+        </button>
 
-        <Button variant="primary" onClick={onOpenImporter}>
+        <button
+          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
+          onClick={onOpenImporter}
+        >
           Importar JSON
-        </Button>
+        </button>
 
-        <Button variant="primary" onClick={onOpenMerger}>
+        <button
+          className="bg-gold text-black py-2 px-4 rounded hover:opacity-80 transition"
+          onClick={onOpenMerger}
+        >
           Combinar Archivos Excel
-        </Button>
-      </VStack>
+        </button>
+      </div>
 
-      <Text mt={6} textAlign="center">
-        Escrituras en Firebase: {firebaseWrites}
-      </Text>
-    </Box>
+      <div className="text-gold text-center">
+        <p>Escrituras en Firebase: {firebaseWrites}</p>
+      </div>
+    </div>
   );
 }
