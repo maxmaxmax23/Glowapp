@@ -26,7 +26,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-gold flex items-center justify-center">
+    <div className="min-h-screen bg-white text-gold flex items-center justify-center">
       {!user ? (
         <LoginForm onLogin={setUser} />
       ) : scannedCode ? (
