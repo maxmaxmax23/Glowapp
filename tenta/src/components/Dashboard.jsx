@@ -4,7 +4,7 @@ import React from "react";
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
   return (
     <div className="p-4 w-full max-w-lg mx-auto flex flex-col gap-4">
-      <h1 className="text-2xl font-bold text-gold mb-4 text-center">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gold mb-4 text-center">Dashboardd</h1>
 
       <div className="flex flex-col gap-3">
         <button
