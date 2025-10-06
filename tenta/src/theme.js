@@ -1,64 +1,90 @@
-// src/theme.js
+// File: src/theme.js
 import { extendTheme } from "@chakra-ui/react";
 
-// Define the color palette
-const colors = {
-  brand: {
-    black: "#0a0a0a",
-    gold: "#FFD700",
-    gray900: "#1a1a1a",
-    gray800: "#2a2a2a",
-    gray700: "#3a3a3a",
-  },
-};
-
-// Define global styles
-const styles = {
-  global: {
-    body: {
-      bg: colors.brand.black,
-      color: colors.brand.gold,
-      fontFamily: "'Inter', sans-serif",
+const theme = extendTheme({
+  colors: {
+    gold: {
+      50: "#fff9e6",
+      100: "#fff2cc",
+      200: "#ffe699",
+      300: "#ffdb66",
+      400: "#ffd133",
+      500: "#ffca00", // primary gold
+      600: "#cc9f00",
+      700: "#997600",
+      800: "#664d00",
+      900: "#332500",
     },
-  },
-};
-
-// Define component defaults & variants
-const components = {
-  Button: {
-    baseStyle: {
-      borderRadius: "xl",
-      fontWeight: "bold",
+    black: {
+      50: "#f2f2f2",
+      100: "#e6e6e6",
+      200: "#cccccc",
+      300: "#b3b3b3",
+      400: "#999999",
+      500: "#808080",
+      600: "#666666",
+      700: "#4d4d4d",
+      800: "#333333",
+      900: "#000000", // primary black
     },
-    variants: {
-      primary: {
-        bg: colors.brand.gold,
-        color: colors.brand.black,
-        _hover: { bg: "#e6c200" },
-      },
-      secondary: {
-        bg: colors.brand.gray700,
-        color: colors.brand.gold,
-        _hover: { bg: colors.brand.gray600 },
-      },
-      danger: {
-        bg: "red.500",
-        color: "white",
-        _hover: { bg: "red.600" },
+    background: "#000000",
+    text: "#FFD700",
+  },
+  fonts: {
+    heading: `'Inter', sans-serif`,
+    body: `'Inter', sans-serif`,
+  },
+  styles: {
+    global: {
+      body: {
+        bg: "black",
+        color: "gold",
       },
     },
   },
-  Modal: {
-    baseStyle: {
-      dialog: {
-        bg: colors.brand.gray900,
-        color: colors.brand.gold,
-        borderRadius: "2xl",
+  components: {
+    Button: {
+      baseStyle: {
+        fontWeight: "bold",
+        borderRadius: "lg",
+      },
+      variants: {
+        solid: {
+          bg: "gold.500",
+          color: "black",
+          _hover: {
+            bg: "gold.400",
+          },
+        },
+        outline: {
+          borderColor: "gold.500",
+          color: "gold.500",
+          _hover: {
+            bg: "gold.50",
+          },
+        },
+        red: {
+          bg: "red.500",
+          color: "white",
+          _hover: {
+            bg: "red.400",
+          },
+        },
+      },
+    },
+    Modal: {
+      baseStyle: {
+        dialog: {
+          bg: "black",
+          color: "gold",
+          borderRadius: "xl",
+        },
+        header: {
+          color: "gold",
+        },
       },
     },
   },
-};
-
-const theme = extendTheme({ colors, styles, components });
+});
 
 export default theme;
