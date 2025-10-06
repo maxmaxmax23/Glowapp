@@ -1,4 +1,3 @@
-// File: src/components/ProductModal.jsx
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -43,11 +42,9 @@ export default function ProductModal({ code, onClose }) {
 
   const DrawerContentInner = (
     <>
-      {/* Drag Handle */}
       {isMobile && (
         <Box w="40px" h="4px" bg="gray.500" borderRadius="full" mx="auto" my={2} />
       )}
-
       <DrawerHeader fontFamily="'Distrampler', serif" fontSize="2xl" textAlign="center">
         {product ? product.description || "Producto" : "Cargando..."}
       </DrawerHeader>
@@ -87,17 +84,20 @@ export default function ProductModal({ code, onClose }) {
     </>
   );
 
-  return isMobile ? (
-    <Drawer isOpen placement="bottom" onClose={onClose} size="full">
+  return (
+    <Drawer
+      isOpen={true}        // force drawer open
+      placement={isMobile ? "bottom" : "right"}
+      onClose={onClose}
+      size={isMobile ? "full" : "md"}
+    >
       <DrawerOverlay />
-      <DrawerContent bg="gray.900" color="gold" borderTopRadius="2xl">
-        {DrawerContentInner}
-      </DrawerContent>
-    </Drawer>
-  ) : (
-    <Drawer isOpen placement="right" onClose={onClose} size="md">
-      <DrawerOverlay />
-      <DrawerContent bg="gray.900" color="gold" borderLeftRadius="2xl">
+      <DrawerContent
+        bg="gray.900"
+        color="gold"
+        borderTopRadius={isMobile ? "2xl" : "none"}
+        borderLeftRadius={isMobile ? "none" : "2xl"}
+      >
         {DrawerContentInner}
       </DrawerContent>
     </Drawer>
