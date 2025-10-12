@@ -1,8 +1,10 @@
-// File: src/components/ProductUploaderModal.jsx
+// File: src/components/ProductUploaderModal.jsx (FINAL PATCH for Sync)
+
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, Timestamp } from "firebase/firestore"; // ADDITION: Import Timestamp
+import { updateLocalProduct } from "../utils/localIndex"; // ADDITION: Import local update utility
 import {
   Box,
   VStack,
@@ -69,10 +71,24 @@ export default function ProductUploaderModal({ product, onClose }) {
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
 
-      await updateDoc(doc(db, "products", product.id), { photoURL: url });
+      const updateData = {
+        photoURL: url,
+        lastUpdated: Timestamp.now() // CRITICAL: Updates Firestore timestamp for sync
+      };
+
+      // 1. Write to Firestore (Source of Truth)
+      await updateDoc(doc(db, "products", product.id), updateData);
+      
+      // 2. Write to Local Index (Instant UX Fix)
+      // Use Date.now() for the local index since it doesn't need a Firestore Timestamp object
+      await updateLocalProduct({ 
+          id: product.id, 
+          photoURL: url,
+          lastUpdated: Date.now() 
+      });
 
       setPhotoURL(url);
-      setMessage("✅ Photo uploaded successfully.");
+      setMessage("✅ Photo uploaded successfully and cache updated.");
     } catch (err) {
       console.error(err);
       setMessage("❌ Upload failed.");

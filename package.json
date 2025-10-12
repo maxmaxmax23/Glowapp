@@ -27,6 +27,7 @@
     "framer-motion": "^12.23.22",
     "fs": "^0.0.1-security",
     "html5-qrcode": "^2.3.8",
+    "idb": "^8.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-zxing": "^2.1.0",
