@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
+import { lookupLocalProduct } from "../utils/localIndex"; // ADDITION: Import local search utility
 import {
   Modal,
   ModalOverlay,
@@ -31,11 +32,30 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
       return;
     }
 
-    try {
-      const snapshot = await getDocs(collection(db, "products"));
-      const lowerTerm = term.toString().trim().toLowerCase();
+    const queryKey = term.toString().trim();
+    let results = [];
 
-      const results = snapshot.docs
+    // ADDITION: P3 Step 1: Attempt local index lookup first
+    try {
+      const localResults = await lookupLocalProduct(queryKey);
+      if (localResults && localResults.length > 0) {
+        // Found matches locally (fast path)
+        console.log(`Local index match found for: ${queryKey}`);
+        setMatches(localResults);
+        return; // Success: Stop here and use local results
+      }
+    } catch (e) {
+      console.warn("Warning: IndexedDB not ready or error during lookup. Falling back to Firestore.", e);
+      // Continue to Firestore fallback if local search fails
+    }
+
+    // ORIGINAL v2.5 LOGIC - P3 Step 2: Fallback to slow Firestore scan (Source of Truth assurance)
+    try {
+      // NOTE: This reads the entire collection and filters in memory (original v2.5 logic)
+      const snapshot = await getDocs(collection(db, "products"));
+      const lowerTerm = queryKey.toLowerCase();
+
+      results = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .filter((item) => {
           const productId = item.id?.toString().toLowerCase() || "";
@@ -51,7 +71,7 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
 
       setMatches(results);
     } catch (err) {
-      console.error("Search error:", err);
+      console.error("P3 Search error (Firestore fallback):", err);
     }
   };
 
