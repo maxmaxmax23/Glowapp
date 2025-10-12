@@ -1,9 +1,9 @@
-// File: src/components/ScannerModal.jsx
+// File: src/components/ScannerModal.jsx (REVISED PATCH)
 import React, { useEffect, useRef, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js";
-import { lookupLocalProduct } from "../utils/localIndex"; // ADDITION: Import local search utility
+import { lookupLocalProduct } from "../utils/localIndex"; // Import local search utility
 import {
   Modal,
   ModalOverlay,
@@ -17,6 +17,7 @@ import {
   HStack,
   Box,
   Text,
+  Spinner, // ADDITION: For loading indicator on live search
 } from "@chakra-ui/react";
 
 export default function ScannerModal({ onClose, onSelectProduct }) {
@@ -25,7 +26,12 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
   const [matches, setMatches] = useState([]);
   const [scannerKey, setScannerKey] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
+  const [isLiveSearching, setIsLiveSearching] = useState(false); // ADDITION: State for the Admin Live Search
 
+  /**
+   * P1: Core Search Function - PRIORITIZES LOCAL CACHE ONLY.
+   * NO AUTOMATIC FIREBASE FALLBACK TO SAVE COSTS.
+   */
   const handleSearch = async (term) => {
     if (!term || term.trim() === "") {
       setMatches([]);
@@ -33,29 +39,39 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
     }
 
     const queryKey = term.toString().trim();
-    let results = [];
 
-    // ADDITION: P3 Step 1: Attempt local index lookup first
+    // 1. Attempt local index lookup first (Fast Path)
     try {
       const localResults = await lookupLocalProduct(queryKey);
       if (localResults && localResults.length > 0) {
-        // Found matches locally (fast path)
-        console.log(`Local index match found for: ${queryKey}`);
         setMatches(localResults);
-        return; // Success: Stop here and use local results
+        return; // SUCCESS: Use local results and STOP here.
       }
     } catch (e) {
-      console.warn("Warning: IndexedDB not ready or error during lookup. Falling back to Firestore.", e);
-      // Continue to Firestore fallback if local search fails
+      console.warn("Warning: Local index lookup failed. Continuing with no results.", e);
     }
+    
+    // 2. Local search failed, but we DO NOT automatically fall back to Firestore.
+    // The user must click the "Buscar en Vivo" button for a Firebase scan.
+    setMatches([]);
+  };
+  
+  /**
+   * P2: ADMIN LIVE SEARCH - Executes the slow, costly Firestore scan.
+   * This logic was previously an automatic fallback in handleSearch.
+   */
+  const handleLiveSearch = async () => {
+    if (!manualSearch || manualSearch.trim() === "") return;
 
-    // ORIGINAL v2.5 LOGIC - P3 Step 2: Fallback to slow Firestore scan (Source of Truth assurance)
+    setIsLiveSearching(true);
+    const queryKey = manualSearch.toString().trim();
+    const lowerTerm = queryKey.toLowerCase();
+    
+    // Firestore Fallback: This is the expensive step now behind an explicit button.
     try {
-      // NOTE: This reads the entire collection and filters in memory (original v2.5 logic)
       const snapshot = await getDocs(collection(db, "products"));
-      const lowerTerm = queryKey.toLowerCase();
-
-      results = snapshot.docs
+      
+      const results = snapshot.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .filter((item) => {
           const productId = item.id?.toString().toLowerCase() || "";
@@ -71,13 +87,17 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
 
       setMatches(results);
     } catch (err) {
-      console.error("P3 Search error (Firestore fallback):", err);
+      console.error("Live Search (Firestore) error:", err);
+      // Optional: Show error state to the user
+    } finally {
+      setIsLiveSearching(false);
     }
   };
 
+
   useEffect(() => {
     if (!readerRef.current || !isScanning) return;
-
+    
     const scanner = new Html5QrcodeScanner(readerRef.current.id, {
       qrbox: { width: 250, height: 250 },
       fps: 10,
@@ -88,7 +108,7 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
     scanner.render(
       (decodedText) => {
         setManualSearch(decodedText);
-        handleSearch(decodedText);
+        handleSearch(decodedText); // Scanner uses the cost-free local search
         setIsScanning(false);
         scanner.clear();
       },
@@ -110,6 +130,7 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
     setIsScanning(false);
     setMatches([]);
     setManualSearch("");
+    setIsLiveSearching(false); // Reset new state
     onClose(); // close the ScannerModal
   };
 
@@ -121,17 +142,19 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
         <ModalBody>
           <VStack spacing={3} align="stretch">
             <HStack>
+              {/* Manual Search Input */}
               <Input
-                placeholder="Buscar por ID, código o descripción..."
+                placeholder="Buscar (Local Index)..."
                 value={manualSearch}
                 onChange={(e) => {
                   setManualSearch(e.target.value);
-                  handleSearch(e.target.value);
+                  handleSearch(e.target.value); // Uses local-only search
                 }}
                 bg="black"
                 color="white"
                 size="sm"
               />
+              {/* Scanner Toggle Button */}
               <Button
                 colorScheme="gold"
                 size="sm"
@@ -140,6 +163,21 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
                 {isScanning ? "Detener" : "Escanear"}
               </Button>
             </HStack>
+            
+            {/* ADDITION: Admin Live Search Button (Costly Operation) */}
+            <Button
+              colorScheme="red"
+              variant="outline"
+              w="full"
+              size="xs"
+              onClick={handleLiveSearch}
+              isDisabled={!manualSearch || isLiveSearching}
+              leftIcon={isLiveSearching ? <Spinner size="xs" /> : null}
+            >
+              {isLiveSearching ? "Buscando en Vivo..." : "Buscar en Vivo (Solo Admin)"}
+            </Button>
+            {/* END ADDITION */}
+
 
             {isScanning && (
               <Box
@@ -181,6 +219,13 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
                 </VStack>
               </Box>
             )}
+            {/* ADDITION: Show status if no local matches were found */}
+            {manualSearch && matches.length === 0 && !isLiveSearching && (
+                 <Text color="gray.500" fontSize="sm" textAlign="center" mt={2}>
+                    No se encontró un producto en el índice local.
+                 </Text>
+            )}
+            {/* END ADDITION */}
           </VStack>
         </ModalBody>
         <ModalFooter justifyContent="center">
