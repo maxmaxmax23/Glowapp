@@ -1,10 +1,10 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH - Batch Writes & Robust Error Handling)
+// File: src/components/MergerModal.jsx (FINAL PATCH for Merging and Persistence)
 
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
 // ADDITION: Import all necessary Firestore utilities
 import { doc, updateDoc, Timestamp, writeBatch } from "firebase/firestore";
-import { db } from "../firebase.js"; // CRITICAL: Ensures the database instance is imported
+import { db } from "../firebase.js"; 
 import {
   Box,
   VStack,
@@ -66,6 +66,8 @@ export default function MergerModal({ onClose, addToQueue }) {
         const barcode = row[0]?.toString().trim();
         const productId = row[1]?.toString().trim();
         const description = row[2]?.toString().trim();
+        
+        // Use raw ID for internal map lookup
         if (barcode && productId) {
           if (!eqMap.has(productId)) eqMap.set(productId, { barcodes: new Set(), description });
           eqMap.get(productId).barcodes.add(barcode);
@@ -80,10 +82,17 @@ export default function MergerModal({ onClose, addToQueue }) {
       twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
 
       prData.forEach((row) => {
-        const productId = row[0]?.toString().trim();
+        let rawProductId = row[0]?.toString().trim(); // Raw ID from Precios file
         const description = row[1]?.toString().trim();
         const vigenciaRaw = row[4];
         const priceRaw = row[5];
+        
+        // CRITICAL FIX: Sanitize the Product ID here before checking/storing
+        let productId = rawProductId;
+        if (productId) {
+            // Replace forward slashes (which Firestore treats as delimiters) with dashes
+            productId = productId.replace(/\//g, '-'); 
+        }
 
         if (!productId || !vigenciaRaw || !priceRaw) {
           skipped++;
@@ -118,11 +127,12 @@ export default function MergerModal({ onClose, addToQueue }) {
           return;
         }
 
-        const eqMatch = eqMap.get(productId);
-        const barcodes = eqMatch ? Array.from(eqMap.get(productId).barcodes) : ["Sin código"];
+        // Use the raw ID for looking up barcodes in the map created earlier
+        const eqMatch = eqMap.get(rawProductId); 
+        const barcodes = eqMatch ? Array.from(eqMap.get(rawProductId).barcodes) : ["Sin código"];
 
         merged.push({
-          productId,
+          productId: productId, // STORE THE SANITIZED ID
           description: description || eqMatch?.description || "Sin descripción",
           barcodes,
           price,
@@ -145,9 +155,8 @@ export default function MergerModal({ onClose, addToQueue }) {
   const handlePersistData = async () => {
     if (mergedData.length === 0) return alert("No hay datos para persistir");
 
-    // CRITICAL FIX: Check for DB availability before starting the costly operation
     if (!db || typeof writeBatch !== 'function') {
-        console.error("CRITICAL ERROR: Firebase/Firestore is not initialized or imported correctly. Check src/firebase.js.");
+        console.error("CRITICAL ERROR: Firestore database (db) is not initialized or imported correctly. Check src/firebase.js.");
         alert("ERROR: No se pudo conectar con la base de datos. Verifica la consola.");
         setPersisting(false);
         return; 
@@ -166,6 +175,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         // 1. Fill the batch
         for (const item of chunk) {
             try { 
+                // Uses the now-sanitized item.productId for a valid Firestore reference
                 const productRef = doc(db, "products", item.productId);
                 
                 batch.update(productRef, {
@@ -184,7 +194,6 @@ export default function MergerModal({ onClose, addToQueue }) {
         try {
             await batch.commit();
         } catch (error) {
-            // This catches network, security rule, and serious Firestore errors
             console.error(`FATAL ERROR AL PERSISTIR BATCH ${i / BATCH_SIZE}. Revisa Reglas de Seguridad o Conexión:`, error);
             failedWrites += chunk.length; 
             successfulWrites -= chunk.length; 
