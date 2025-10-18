@@ -1,9 +1,9 @@
-// File: src/components/MergerModal.jsx
+// File: src/components/MergerModal.jsx (FINAL PATCH with Batch Writes)
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-// ADDITION: Import Firestore utilities
-import { doc, updateDoc, Timestamp } from "firebase/firestore";
-import { db } from "../firebase.js"; // Assuming db is exported from firebase.js
+// MODIFICATION: Import the batch utility
+import { doc, updateDoc, Timestamp, writeBatch } from "firebase/firestore";
+import { db } from "../firebase.js"; 
 import {
   Box,
   VStack,
@@ -26,17 +26,19 @@ import {
   Progress,
 } from "@chakra-ui/react";
 
-// NOTE: The addToQueue prop is now effectively deprecated, but kept here 
-// for zero functionality loss compatibility if App.jsx still relies on it.
+// NOTE: The maximum number of writes per batch is 500.
+const BATCH_SIZE = 500; 
+
 export default function MergerModal({ onClose, addToQueue }) { 
   const [equivalenciasFile, setEquivalenciasFile] = useState(null);
   const [preciosFile, setPreciosFile] = useState(null);
   const [mergedData, setMergedData] = useState([]);
-  // MODIFICATION: Added 'failed' to track persistence status
   const [stats, setStats] = useState({ written: 0, skipped: 0, outOfTime: 0, failed: 0 }); 
   const [loading, setLoading] = useState(false);
-  const [persisting, setPersisting] = useState(false); // ADDITION: State for persistence loading
+  const [persisting, setPersisting] = useState(false); 
+  const [progress, setProgress] = useState(0); 
 
+  // ... (parseExcel function remains UNCHANGED)
   const parseExcel = async (file) => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
@@ -44,13 +46,12 @@ export default function MergerModal({ onClose, addToQueue }) {
     return XLSX.utils.sheet_to_json(sheet, { header: 1 });
   };
 
+  // ... (handleMerge function remains UNCHANGED)
   const handleMerge = async () => {
-    // ... (handleMerge logic remains completely unchanged) ...
     if (!equivalenciasFile || !preciosFile) {
       alert("Selecciona ambos archivos antes de continuar.");
       return;
     }
-
     setLoading(true);
     try {
       const [eqRows, prRows] = await Promise.all([
@@ -72,9 +73,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         }
       });
 
-      let written = 0,
-        skipped = 0,
-        outOfTime = 0;
+      let written = 0, skipped = 0, outOfTime = 0;
       const merged = [];
 
       const now = new Date();
@@ -133,7 +132,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         written++;
       });
 
-      setStats({ written, skipped, outOfTime, failed: 0 });
+      setStats({ written, skipped, outOfTime, failed: 0 }); 
       setMergedData(merged);
     } catch (error) {
       console.error("Error al procesar archivos:", error);
@@ -143,67 +142,76 @@ export default function MergerModal({ onClose, addToQueue }) {
     }
   };
 
-  // MODIFICATION: New persistence function replacing the transient queue (addToQueue)
+
+  // MODIFICATION: handlePersistData now uses Batched Writes for high performance
   const handlePersistData = async () => {
     if (mergedData.length === 0) return alert("No hay datos para persistir");
 
-    setPersisting(true); // Use new state for persistence loading
+    setPersisting(true); 
+    setProgress(0);
+    const totalItems = mergedData.length;
     let successfulWrites = 0;
     let failedWrites = 0;
     
-    // Iterate over the merged data and perform a Firestore update for each product
-    for (const item of mergedData) {
-        try {
-            const productRef = doc(db, "products", item.productId);
-            
-            // CRITICAL: Update the product's barcodes, price, and lastUpdated timestamp
-            await updateDoc(productRef, {
-                // Remove the "Sin código" placeholder before writing to DB
-                barcodes: item.barcodes.filter(b => b !== "Sin código"), 
-                price: item.price,
-                lastUpdated: Timestamp.now(), // ESSENTIAL: Triggers incremental sync
-            });
-            successfulWrites++;
-        } catch (error) {
-            console.error(`Error al persistir producto ${item.productId}:`, error);
-            failedWrites++;
+    // We break the updates into chunks and process the batches
+    for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+        let batch = writeBatch(db);
+        const chunk = mergedData.slice(i, i + BATCH_SIZE);
+        
+        // 1. Fill the batch
+        for (const item of chunk) {
+            try {
+                const productRef = doc(db, "products", item.productId);
+                
+                // stage the update; this does not contact the network yet
+                batch.update(productRef, {
+                    barcodes: item.barcodes.filter(b => b !== "Sin código"), 
+                    price: item.price,
+                    lastUpdated: Timestamp.now(), 
+                });
+                successfulWrites++;
+
+            } catch (error) {
+                // NOTE: This catch block handles local errors (e.g., productRef creation),
+                // but true Firebase errors will be caught after the batch.commit()
+                console.error(`Error al preparar batch para ${item.productId}:`, error);
+                failedWrites++;
+            }
         }
+
+        // 2. Commit the batch (single network call)
+        try {
+            await batch.commit();
+        } catch (error) {
+            // A batch failure means 500 writes failed, but we only increment failedWrites by 1
+            // (a more complex logic is needed to isolate individual batch failures)
+            console.error(`Error al persistir el batch ${i / BATCH_SIZE}:`, error);
+            failedWrites += chunk.length; 
+            successfulWrites -= chunk.length; // Correct the success count
+        }
+        
+        // 3. Update the progress bar after each batch is attempted
+        const newProgress = ((i + BATCH_SIZE) / totalItems) * 100;
+        setProgress(Math.min(newProgress, 100)); // Cap at 100%
     }
 
     setPersisting(false);
     
-    // Update the UI stats with the results of the persistence step
     setStats(prev => ({ 
         ...prev, 
-        written: successfulWrites, 
+        written: Math.max(0, successfulWrites), // Ensure written count is not negative
         failed: failedWrites,
     })); 
     
-    alert(`${successfulWrites} productos persistidos en la base de datos. ${failedWrites} fallaron.`);
+    alert(`Proceso Completo. ${Math.max(0, successfulWrites)} productos persistidos. ${failedWrites} fallaron.`);
     
     // Clear data after processing
     setMergedData([]);
     setEquivalenciasFile(null);
     setPreciosFile(null);
-    // onClose(); // Let the user review stats before closing
   };
 
-  // NOTE: The original handleAddToQueue is commented out as it is replaced by handlePersistData
-  /*
-  const handleAddToQueue = () => {
-    if (mergedData.length === 0) return alert("No hay datos para añadir a la cola");
-    addToQueue(mergedData);
-    alert(`${mergedData.length} productos añadidos a la cola`);
-    setMergedData([]);
-    setStats({ written: 0, skipped: 0, outOfTime: 0 });
-    setEquivalenciasFile(null);
-    setPreciosFile(null);
-    onClose();
-  };
-  */
-  
-  // Placeholder function for the now-removed handleAddToQueue (allows the button to be patched easily)
-  const handleAddToQueue = () => { /* Now calls the persistence function below */ }; 
+  const handleAddToQueue = () => { /* Placeholder for deprecated function */ }; 
 
 
   return (
@@ -236,12 +244,11 @@ export default function MergerModal({ onClose, addToQueue }) {
               onClick={handleMerge}
               isLoading={loading}
               loadingText="Procesando... (Excel)"
-              isDisabled={persisting} // Disable during persistence
+              isDisabled={persisting} 
             >
               Fusionar y Previsualizar
             </Button>
 
-            {/* MODIFICATION: Button now calls the persistence function */}
             <Button
               colorScheme="green"
               onClick={handlePersistData}
@@ -251,16 +258,25 @@ export default function MergerModal({ onClose, addToQueue }) {
             >
               Persistir en Firebase
             </Button>
-            {/* END MODIFICATION */}
           </VStack>
+          
+          {/* Progress Bar Display */}
+          {persisting && (
+            <Box mb={4}>
+              <Text fontSize="sm" color="gold" mb={1}>
+                Progreso: {Math.round(progress)}% ({Math.round(progress / 100 * totalItems)}/{totalItems} items)
+              </Text>
+              <Progress value={progress} size="sm" colorScheme="green" hasStripe isAnimated={progress < 100}/>
+            </Box>
+          )}
 
           <Box mb={3}>
-             {/* MODIFICATION: Display the success/failure counts clearly */}
             <Text fontSize="sm">
               ✅ **Persistidos:** {stats.written} | ❌ **Fallaron:** {stats.failed} | ⚠️ **Ignorados (en Excel):** {stats.skipped} | ⏰ **Fuera de vigencia:** {stats.outOfTime}
             </Text>
           </Box>
-
+          
+          {/* ... (Preview Table JSX remains the same) ... */}
           {mergedData.length > 0 && (
             <TableContainer maxH="300px" overflowY="auto" border="1px" borderColor="gold" borderRadius="md">
               <Table variant="simple" size="sm">
