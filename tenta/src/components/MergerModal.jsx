@@ -1,6 +1,9 @@
 // File: src/components/MergerModal.jsx
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
+// ADDITION: Import Firestore utilities
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { db } from "../firebase.js"; // Assuming db is exported from firebase.js
 import {
   Box,
   VStack,
@@ -23,12 +26,16 @@ import {
   Progress,
 } from "@chakra-ui/react";
 
-export default function MergerModal({ onClose, addToQueue }) {
+// NOTE: The addToQueue prop is now effectively deprecated, but kept here 
+// for zero functionality loss compatibility if App.jsx still relies on it.
+export default function MergerModal({ onClose, addToQueue }) { 
   const [equivalenciasFile, setEquivalenciasFile] = useState(null);
   const [preciosFile, setPreciosFile] = useState(null);
   const [mergedData, setMergedData] = useState([]);
-  const [stats, setStats] = useState({ written: 0, skipped: 0, outOfTime: 0 });
+  // MODIFICATION: Added 'failed' to track persistence status
+  const [stats, setStats] = useState({ written: 0, skipped: 0, outOfTime: 0, failed: 0 }); 
   const [loading, setLoading] = useState(false);
+  const [persisting, setPersisting] = useState(false); // ADDITION: State for persistence loading
 
   const parseExcel = async (file) => {
     const data = await file.arrayBuffer();
@@ -38,6 +45,7 @@ export default function MergerModal({ onClose, addToQueue }) {
   };
 
   const handleMerge = async () => {
+    // ... (handleMerge logic remains completely unchanged) ...
     if (!equivalenciasFile || !preciosFile) {
       alert("Selecciona ambos archivos antes de continuar.");
       return;
@@ -113,7 +121,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         }
 
         const eqMatch = eqMap.get(productId);
-        const barcodes = eqMatch ? Array.from(eqMatch.barcodes) : ["Sin código"];
+        const barcodes = eqMatch ? Array.from(eqMap.get(productId).barcodes) : ["Sin código"];
 
         merged.push({
           productId,
@@ -125,7 +133,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         written++;
       });
 
-      setStats({ written, skipped, outOfTime });
+      setStats({ written, skipped, outOfTime, failed: 0 });
       setMergedData(merged);
     } catch (error) {
       console.error("Error al procesar archivos:", error);
@@ -135,6 +143,53 @@ export default function MergerModal({ onClose, addToQueue }) {
     }
   };
 
+  // MODIFICATION: New persistence function replacing the transient queue (addToQueue)
+  const handlePersistData = async () => {
+    if (mergedData.length === 0) return alert("No hay datos para persistir");
+
+    setPersisting(true); // Use new state for persistence loading
+    let successfulWrites = 0;
+    let failedWrites = 0;
+    
+    // Iterate over the merged data and perform a Firestore update for each product
+    for (const item of mergedData) {
+        try {
+            const productRef = doc(db, "products", item.productId);
+            
+            // CRITICAL: Update the product's barcodes, price, and lastUpdated timestamp
+            await updateDoc(productRef, {
+                // Remove the "Sin código" placeholder before writing to DB
+                barcodes: item.barcodes.filter(b => b !== "Sin código"), 
+                price: item.price,
+                lastUpdated: Timestamp.now(), // ESSENTIAL: Triggers incremental sync
+            });
+            successfulWrites++;
+        } catch (error) {
+            console.error(`Error al persistir producto ${item.productId}:`, error);
+            failedWrites++;
+        }
+    }
+
+    setPersisting(false);
+    
+    // Update the UI stats with the results of the persistence step
+    setStats(prev => ({ 
+        ...prev, 
+        written: successfulWrites, 
+        failed: failedWrites,
+    })); 
+    
+    alert(`${successfulWrites} productos persistidos en la base de datos. ${failedWrites} fallaron.`);
+    
+    // Clear data after processing
+    setMergedData([]);
+    setEquivalenciasFile(null);
+    setPreciosFile(null);
+    // onClose(); // Let the user review stats before closing
+  };
+
+  // NOTE: The original handleAddToQueue is commented out as it is replaced by handlePersistData
+  /*
   const handleAddToQueue = () => {
     if (mergedData.length === 0) return alert("No hay datos para añadir a la cola");
     addToQueue(mergedData);
@@ -145,6 +200,11 @@ export default function MergerModal({ onClose, addToQueue }) {
     setPreciosFile(null);
     onClose();
   };
+  */
+  
+  // Placeholder function for the now-removed handleAddToQueue (allows the button to be patched easily)
+  const handleAddToQueue = () => { /* Now calls the persistence function below */ }; 
+
 
   return (
     <Modal isOpen onClose={onClose} size="xl" scrollBehavior="inside" isCentered>
@@ -175,23 +235,29 @@ export default function MergerModal({ onClose, addToQueue }) {
               colorScheme="gold"
               onClick={handleMerge}
               isLoading={loading}
-              loadingText="Procesando..."
+              loadingText="Procesando... (Excel)"
+              isDisabled={persisting} // Disable during persistence
             >
               Fusionar y Previsualizar
             </Button>
 
+            {/* MODIFICATION: Button now calls the persistence function */}
             <Button
               colorScheme="green"
-              onClick={handleAddToQueue}
-              isDisabled={mergedData.length === 0}
+              onClick={handlePersistData}
+              isLoading={persisting}
+              loadingText="Persistiendo en Firebase..."
+              isDisabled={mergedData.length === 0 || loading || persisting}
             >
-              Añadir a la cola
+              Persistir en Firebase
             </Button>
+            {/* END MODIFICATION */}
           </VStack>
 
           <Box mb={3}>
+             {/* MODIFICATION: Display the success/failure counts clearly */}
             <Text fontSize="sm">
-              ✅ A escribir: {stats.written} | ⚠️ Ignorados: {stats.skipped} | ⏰ Fuera de vigencia: {stats.outOfTime}
+              ✅ **Persistidos:** {stats.written} | ❌ **Fallaron:** {stats.failed} | ⚠️ **Ignorados (en Excel):** {stats.skipped} | ⏰ **Fuera de vigencia:** {stats.outOfTime}
             </Text>
           </Box>
 
@@ -211,7 +277,7 @@ export default function MergerModal({ onClose, addToQueue }) {
                 <Tbody>
                   {mergedData.map((item, idx) => (
                     <Tr key={idx} borderBottom="1px" borderColor="gray.700">
-                      <Td>{new Date(item.vigencia) < new Date() ? "Fuera de vigencia" : "A escribir"}</Td>
+                      <Td>{new Date(item.vigencia) < new Date() ? "Revisar" : "Listo para persistir"}</Td>
                       <Td>{item.productId}</Td>
                       <Td>{item.description}</Td>
                       <Td>{item.barcodes.join(", ")}</Td>
