@@ -1,5 +1,4 @@
-// File: src/components/ProductUploaderModal.jsx (FINAL PATCH for Sync)
-
+// File: src/components/ProductUploaderModal.jsx (FINAL PATCH - ID Validation and Sync Integration)
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -30,6 +29,7 @@ export default function ProductUploaderModal({ product, onClose }) {
     } else {
       const tryFetchExisting = async () => {
         try {
+          // Note: This logic correctly uses product.id but should be secured by the validation below
           const fileRef = ref(storage, `images/${product.id}.jpg`);
           const url = await getDownloadURL(fileRef);
           setPhotoURL(url);
@@ -37,7 +37,10 @@ export default function ProductUploaderModal({ product, onClose }) {
           // silently ignore
         }
       };
-      tryFetchExisting();
+      // Only attempt to fetch if an ID exists
+      if (product.id) {
+          tryFetchExisting();
+      }
     }
   }, [product]);
 
@@ -65,9 +68,19 @@ export default function ProductUploaderModal({ product, onClose }) {
   };
 
   const uploadImage = async (file) => {
+    // CRITICAL FIX: Block upload if the ID is invalid to prevent 'undefined.jpg' corruption.
+    if (!product.id || product.id === 'undefined') {
+      console.error("Upload Error: Product ID is missing or invalid.");
+      setMessage("❌ ERROR: El producto debe ser guardado y tener un ID válido antes de subir la foto.");
+      setUploading(false);
+      return;
+    }
+
     try {
       setUploading(true);
-      const fileRef = ref(storage, `images/${product.id}.jpg`);
+      
+      // Use the now-validated product.id
+      const fileRef = ref(storage, `images/${product.id}.jpg`); 
       await uploadBytes(fileRef, file);
       const url = await getDownloadURL(fileRef);
 
@@ -80,7 +93,6 @@ export default function ProductUploaderModal({ product, onClose }) {
       await updateDoc(doc(db, "products", product.id), updateData);
       
       // 2. Write to Local Index (Instant UX Fix)
-      // Use Date.now() for the local index since it doesn't need a Firestore Timestamp object
       await updateLocalProduct({ 
           id: product.id, 
           photoURL: url,
@@ -88,10 +100,10 @@ export default function ProductUploaderModal({ product, onClose }) {
       });
 
       setPhotoURL(url);
-      setMessage("✅ Photo uploaded successfully and cache updated.");
+      setMessage("✅ Foto subida exitosamente y caché actualizada.");
     } catch (err) {
       console.error(err);
-      setMessage("❌ Upload failed.");
+      setMessage("❌ Falló la subida de la foto. Revisa la consola/reglas de Firebase.");
     } finally {
       setUploading(false);
     }
@@ -152,7 +164,7 @@ export default function ProductUploaderModal({ product, onClose }) {
             w="full"
             isDisabled={uploading}
           >
-            📷 Take Photo
+            📷 Tomar Foto
           </Button>
 
           <Button
@@ -162,7 +174,7 @@ export default function ProductUploaderModal({ product, onClose }) {
             cursor="pointer"
             isDisabled={uploading}
           >
-            🖼️ Select File
+            🖼️ Seleccionar Archivo
             <Input
               type="file"
               accept="image/*"
@@ -183,7 +195,7 @@ export default function ProductUploaderModal({ product, onClose }) {
             _hover={{ bg: "gold", color: "black" }}
             w="full"
           >
-            Close
+            Cerrar
           </Button>
         </VStack>
       </Box>
