@@ -1,9 +1,10 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH with Batch Writes)
+// File: src/components/MergerModal.jsx (FINAL PATCH - Batch Writes & Robust Error Handling)
+
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-// MODIFICATION: Import the batch utility
+// ADDITION: Import all necessary Firestore utilities
 import { doc, updateDoc, Timestamp, writeBatch } from "firebase/firestore";
-import { db } from "../firebase.js"; 
+import { db } from "../firebase.js"; // CRITICAL: Ensures the database instance is imported
 import {
   Box,
   VStack,
@@ -26,7 +27,6 @@ import {
   Progress,
 } from "@chakra-ui/react";
 
-// NOTE: The maximum number of writes per batch is 500.
 const BATCH_SIZE = 500; 
 
 export default function MergerModal({ onClose, addToQueue }) { 
@@ -38,7 +38,6 @@ export default function MergerModal({ onClose, addToQueue }) {
   const [persisting, setPersisting] = useState(false); 
   const [progress, setProgress] = useState(0); 
 
-  // ... (parseExcel function remains UNCHANGED)
   const parseExcel = async (file) => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
@@ -46,12 +45,12 @@ export default function MergerModal({ onClose, addToQueue }) {
     return XLSX.utils.sheet_to_json(sheet, { header: 1 });
   };
 
-  // ... (handleMerge function remains UNCHANGED)
   const handleMerge = async () => {
     if (!equivalenciasFile || !preciosFile) {
       alert("Selecciona ambos archivos antes de continuar.");
       return;
     }
+
     setLoading(true);
     try {
       const [eqRows, prRows] = await Promise.all([
@@ -143,37 +142,39 @@ export default function MergerModal({ onClose, addToQueue }) {
   };
 
 
-  // MODIFICATION: handlePersistData now uses Batched Writes for high performance
   const handlePersistData = async () => {
     if (mergedData.length === 0) return alert("No hay datos para persistir");
 
+    // CRITICAL FIX: Check for DB availability before starting the costly operation
+    if (!db || typeof writeBatch !== 'function') {
+        console.error("CRITICAL ERROR: Firebase/Firestore is not initialized or imported correctly. Check src/firebase.js.");
+        alert("ERROR: No se pudo conectar con la base de datos. Verifica la consola.");
+        setPersisting(false);
+        return; 
+    }
+    
     setPersisting(true); 
     setProgress(0);
     const totalItems = mergedData.length;
     let successfulWrites = 0;
     let failedWrites = 0;
     
-    // We break the updates into chunks and process the batches
     for (let i = 0; i < totalItems; i += BATCH_SIZE) {
         let batch = writeBatch(db);
         const chunk = mergedData.slice(i, i + BATCH_SIZE);
         
         // 1. Fill the batch
         for (const item of chunk) {
-            try {
+            try { 
                 const productRef = doc(db, "products", item.productId);
                 
-                // stage the update; this does not contact the network yet
                 batch.update(productRef, {
                     barcodes: item.barcodes.filter(b => b !== "Sin código"), 
                     price: item.price,
                     lastUpdated: Timestamp.now(), 
                 });
                 successfulWrites++;
-
             } catch (error) {
-                // NOTE: This catch block handles local errors (e.g., productRef creation),
-                // but true Firebase errors will be caught after the batch.commit()
                 console.error(`Error al preparar batch para ${item.productId}:`, error);
                 failedWrites++;
             }
@@ -183,29 +184,28 @@ export default function MergerModal({ onClose, addToQueue }) {
         try {
             await batch.commit();
         } catch (error) {
-            // A batch failure means 500 writes failed, but we only increment failedWrites by 1
-            // (a more complex logic is needed to isolate individual batch failures)
-            console.error(`Error al persistir el batch ${i / BATCH_SIZE}:`, error);
+            // This catches network, security rule, and serious Firestore errors
+            console.error(`FATAL ERROR AL PERSISTIR BATCH ${i / BATCH_SIZE}. Revisa Reglas de Seguridad o Conexión:`, error);
             failedWrites += chunk.length; 
-            successfulWrites -= chunk.length; // Correct the success count
+            successfulWrites -= chunk.length; 
+            break; 
         }
         
-        // 3. Update the progress bar after each batch is attempted
+        // 3. Update the progress bar
         const newProgress = ((i + BATCH_SIZE) / totalItems) * 100;
-        setProgress(Math.min(newProgress, 100)); // Cap at 100%
+        setProgress(Math.min(newProgress, 100));
     }
 
     setPersisting(false);
     
     setStats(prev => ({ 
         ...prev, 
-        written: Math.max(0, successfulWrites), // Ensure written count is not negative
+        written: Math.max(0, successfulWrites), 
         failed: failedWrites,
     })); 
     
     alert(`Proceso Completo. ${Math.max(0, successfulWrites)} productos persistidos. ${failedWrites} fallaron.`);
     
-    // Clear data after processing
     setMergedData([]);
     setEquivalenciasFile(null);
     setPreciosFile(null);
@@ -260,11 +260,10 @@ export default function MergerModal({ onClose, addToQueue }) {
             </Button>
           </VStack>
           
-          {/* Progress Bar Display */}
           {persisting && (
             <Box mb={4}>
               <Text fontSize="sm" color="gold" mb={1}>
-                Progreso: {Math.round(progress)}% ({Math.round(progress / 100 * totalItems)}/{totalItems} items)
+                Progreso: {Math.round(progress)}%
               </Text>
               <Progress value={progress} size="sm" colorScheme="green" hasStripe isAnimated={progress < 100}/>
             </Box>
@@ -276,7 +275,6 @@ export default function MergerModal({ onClose, addToQueue }) {
             </Text>
           </Box>
           
-          {/* ... (Preview Table JSX remains the same) ... */}
           {mergedData.length > 0 && (
             <TableContainer maxH="300px" overflowY="auto" border="1px" borderColor="gold" borderRadius="md">
               <Table variant="simple" size="sm">
