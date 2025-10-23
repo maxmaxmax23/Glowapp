@@ -1,9 +1,9 @@
-// File: src/components/ProductUploaderModal.jsx (FINAL PATCH - ID Validation and Sync Integration)
+// File: src/components/ProductUploaderModal.jsx (FINAL PATCH - Robust ID Check)
 import React, { useEffect, useState } from "react";
 import { db, storage } from "../firebase.js";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { doc, updateDoc, Timestamp } from "firebase/firestore"; // ADDITION: Import Timestamp
-import { updateLocalProduct } from "../utils/localIndex"; // ADDITION: Import local update utility
+import { doc, updateDoc, Timestamp } from "firebase/firestore";
+import { updateLocalProduct } from "../utils/localIndex"; 
 import {
   Box,
   VStack,
@@ -29,7 +29,6 @@ export default function ProductUploaderModal({ product, onClose }) {
     } else {
       const tryFetchExisting = async () => {
         try {
-          // Note: This logic correctly uses product.id but should be secured by the validation below
           const fileRef = ref(storage, `images/${product.id}.jpg`);
           const url = await getDownloadURL(fileRef);
           setPhotoURL(url);
@@ -68,9 +67,9 @@ export default function ProductUploaderModal({ product, onClose }) {
   };
 
   const uploadImage = async (file) => {
-    // CRITICAL FIX: Block upload if the ID is invalid to prevent 'undefined.jpg' corruption.
-    if (!product.id || product.id === 'undefined') {
-      console.error("Upload Error: Product ID is missing or invalid.");
+    // CRITICAL FIX: Robust validation for a valid product ID string
+    if (!product || !product.id || typeof product.id !== 'string' || product.id.length < 1) {
+      console.error("Upload Error: Product prop is null or ID is invalid during upload attempt.");
       setMessage("❌ ERROR: El producto debe ser guardado y tener un ID válido antes de subir la foto.");
       setUploading(false);
       return;
@@ -86,7 +85,7 @@ export default function ProductUploaderModal({ product, onClose }) {
 
       const updateData = {
         photoURL: url,
-        lastUpdated: Timestamp.now() // CRITICAL: Updates Firestore timestamp for sync
+        lastUpdated: Timestamp.now()
       };
 
       // 1. Write to Firestore (Source of Truth)
