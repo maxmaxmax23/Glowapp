@@ -1,4 +1,4 @@
-// File: src/App.jsx (PATCHED - Full Product Object Management)
+// File: src/App.jsx (FINAL PATCH - Full Product Object Management & Flow Control)
 import React, { useState } from "react";
 import LoginForm from "./components/LoginForm.jsx";
 import Dashboard from "./components/Dashboard.jsx";
@@ -9,7 +9,7 @@ import MergerModal from "./components/MergerModal.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
-  // MODIFICATION: Renamed state to hold the full product OBJECT, not just the code/ID string.
+  // MODIFICATION: Holds the full product OBJECT.
   const [selectedProduct, setSelectedProduct] = useState(null); 
   
   const [showScanner, setShowScanner] = useState(false);
@@ -21,15 +21,15 @@ export default function App() {
 
   // ADDITION: New handler to process the full product result from the Scanner
   const handleProductSelect = (productObject) => {
-    // 1. Ensure the product is a valid object with an ID before setting state
+    // 1. Set the product object state
     if (productObject && productObject.id) {
         setSelectedProduct(productObject);
     } else {
-        // Handle case where product is found but data is malformed
-        console.error("Attempted to select product with invalid data:", productObject);
-        alert("Error al cargar producto: ID no válido.");
+        console.error("Product selected without valid ID. State remains unchanged.");
+        // We do not alert the user here, we just fail silently and close the scanner.
     }
-    setShowScanner(false); // Close the scanner modal
+    // 2. CRITICAL FIX: App.jsx is now responsible for closing the ScannerModal
+    setShowScanner(false); 
   };
 
   return (
@@ -37,7 +37,7 @@ export default function App() {
       {!user ? (
         <LoginForm onLogin={setUser} />
       ) : selectedProduct ? (
-        // MODIFICATION: Pass the full object down to the ProductModal
+        // MODIFICATION: Pass the full product object down to the ProductModal
         <ProductModal 
             product={selectedProduct} 
             onClose={() => setSelectedProduct(null)} 
@@ -56,7 +56,6 @@ export default function App() {
               onClose={() => setShowScanner(false)}
               // MODIFICATION: Now uses the new handler to manage the product object
               onSelectProduct={handleProductSelect} 
-              // NOTE: ScannerModal.jsx will need to be patched to pass the FULL product OBJECT, not just the ID.
             />
           )}
 
@@ -68,7 +67,8 @@ export default function App() {
           )}
 
           {showMerger && (
-            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => {}} />
+            // NOTE: The addToQueue prop has been deprecated by the patch in MergerModal.jsx
+            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => {}} /> 
           )}
         </>
       )}
