@@ -1,4 +1,4 @@
-// File: src/App.jsx
+// File: src/App.jsx (PATCHED - Full Product Object Management)
 import React, { useState } from "react";
 import LoginForm from "./components/LoginForm.jsx";
 import Dashboard from "./components/Dashboard.jsx";
@@ -9,7 +9,9 @@ import MergerModal from "./components/MergerModal.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [scannedCode, setScannedCode] = useState(null);
+  // MODIFICATION: Renamed state to hold the full product OBJECT, not just the code/ID string.
+  const [selectedProduct, setSelectedProduct] = useState(null); 
+  
   const [showScanner, setShowScanner] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
   const [showMerger, setShowMerger] = useState(false);
@@ -17,12 +19,29 @@ export default function App() {
 
   const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
 
+  // ADDITION: New handler to process the full product result from the Scanner
+  const handleProductSelect = (productObject) => {
+    // 1. Ensure the product is a valid object with an ID before setting state
+    if (productObject && productObject.id) {
+        setSelectedProduct(productObject);
+    } else {
+        // Handle case where product is found but data is malformed
+        console.error("Attempted to select product with invalid data:", productObject);
+        alert("Error al cargar producto: ID no válido.");
+    }
+    setShowScanner(false); // Close the scanner modal
+  };
+
   return (
     <div className="min-h-screen bg-black text-gold flex items-center justify-center">
       {!user ? (
         <LoginForm onLogin={setUser} />
-      ) : scannedCode ? (
-        <ProductModal code={scannedCode} onClose={() => setScannedCode(null)} />
+      ) : selectedProduct ? (
+        // MODIFICATION: Pass the full object down to the ProductModal
+        <ProductModal 
+            product={selectedProduct} 
+            onClose={() => setSelectedProduct(null)} 
+        />
       ) : (
         <>
           <Dashboard
@@ -35,7 +54,9 @@ export default function App() {
           {showScanner && (
             <ScannerModal
               onClose={() => setShowScanner(false)}
-              onSelectProduct={(productId) => setScannedCode(productId)}
+              // MODIFICATION: Now uses the new handler to manage the product object
+              onSelectProduct={handleProductSelect} 
+              // NOTE: ScannerModal.jsx will need to be patched to pass the FULL product OBJECT, not just the ID.
             />
           )}
 

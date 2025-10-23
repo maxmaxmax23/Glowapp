@@ -120,7 +120,7 @@ export default function ScannerModal({ onClose, onSelectProduct }) {
 
   const handleSelectProduct = (product) => {
     if (onSelectProduct) {
-      onSelectProduct(product.id); // trigger App.jsx ProductModal
+      onSelectProduct(product); // trigger App.jsx ProductModal
     }
     resetScanner();
   };
