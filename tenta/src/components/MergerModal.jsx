@@ -1,8 +1,8 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH for Persistence Reliability)
+// File: src/components/MergerModal.jsx (FINAL PATCH - Conflict Resolution and Batch Writes)
 
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-// MODIFICATION: Import doc, setDoc, Timestamp, and writeBatch for fast, reliable updates
+// ADDITION: Import all necessary Firestore utilities
 import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore"; 
 import { db } from "../firebase.js"; 
 import {
@@ -58,45 +58,73 @@ export default function MergerModal({ onClose, addToQueue }) {
         parseExcel(preciosFile),
       ]);
 
-      const eqData = eqRows.slice(1);
-      const prData = prRows.slice(1);
+      const rawEqData = eqRows.slice(1);
+      const rawPrData = prRows.slice(1);
 
+      // --- STEP 1: Build Conflict Superset and Barcode Map ---
       const eqMap = new Map();
-      eqData.forEach((row) => {
+      const barcodeSuperset = new Set(); // Stores ALL unique barcodes from Equivalencias
+
+      rawEqData.forEach((row) => {
         const barcode = row[0]?.toString().trim();
         const productId = row[1]?.toString().trim();
         const description = row[2]?.toString().trim();
         
-        // Use raw ID for internal map lookup
         if (barcode && productId) {
+          // 1. Add barcode to the superset for conflict checking
+          barcodeSuperset.add(barcode); 
+          
+          // 2. Original mapping logic (create map of barcodes by true Product ID)
           if (!eqMap.has(productId)) eqMap.set(productId, { barcodes: new Set(), description });
           eqMap.get(productId).barcodes.add(barcode);
         }
       });
+      // --- END STEP 1 ---
+      
 
-      let written = 0, skipped = 0, outOfTime = 0;
+      let written = 0;
+      let skipped = 0; // Will accumulate conflict skips and format skips
+      let outOfTime = 0;
       const merged = [];
-
       const now = new Date();
       const twelveMonthsAgo = new Date(now);
       twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
 
+      // --- STEP 2: Filter Obsolete IDs from Precios File (Conflict Resolution) ---
+      let prData = [];
+      
+      rawPrData.forEach(row => {
+          const productId = row[0]?.toString().trim();
+          
+          // CRITICAL CONFLICT CHECK: If the Product ID in the Precios file is found as a BARCODE in the Equivalencias superset,
+          // it is obsolete and should be skipped.
+          if (productId && barcodeSuperset.has(productId)) {
+              skipped++; 
+              return; // Skip this row entirely
+          }
+          prData.push(row); // Keep the row if no conflict
+      });
+      // --- END STEP 2 ---
+
+
+      // --- STEP 3: Process Filtered Data and Finalize Merged Array ---
       prData.forEach((row) => {
-        let rawProductId = row[0]?.toString().trim(); // Raw ID from Precios file
+        let rawProductId = row[0]?.toString().trim(); 
         const description = row[1]?.toString().trim();
         const vigenciaRaw = row[4];
         const priceRaw = row[5];
         
-        // CRITICAL FIX: Sanitize the Product ID here to prevent the "Invalid document reference" error
-        let productId = rawProductId;
-        if (productId) {
-            // Replace forward slashes (which Firestore treats as delimiters) with dashes
-            productId = productId.replace(/\//g, '-'); 
+        // Validation check for fundamental errors (not conflict-related)
+        if (!rawProductId || !vigenciaRaw || !priceRaw) {
+          skipped++; // Count as skipped because it's malformed
+          return;
         }
 
-        if (!productId || !vigenciaRaw || !priceRaw) {
-          skipped++;
-          return;
+        // Apply ID sanitization only to the ID that is being persisted
+        let productId = rawProductId;
+        if (productId) {
+            // FIX: Replace forward slashes (Firestore delimiter) with dashes
+            productId = productId.replace(/\//g, '-'); 
         }
 
         let vigencia;
@@ -112,7 +140,7 @@ export default function MergerModal({ onClose, addToQueue }) {
             }
           }
         } catch {
-          skipped++;
+          skipped++; // Count as skipped because of parsing error
           return;
         }
 
@@ -123,11 +151,11 @@ export default function MergerModal({ onClose, addToQueue }) {
 
         let price = parseFloat(priceRaw.toString().replace(/\./g, "").replace(",", "."));
         if (isNaN(price)) {
-          skipped++;
+          skipped++; // Count as skipped because of price error
           return;
         }
 
-        // Use the raw ID for looking up barcodes in the map created earlier
+        // Barcode lookup MUST still use the RAW ID from the Precios file
         const eqMatch = eqMap.get(rawProductId); 
         const barcodes = eqMatch ? Array.from(eqMap.get(rawProductId).barcodes) : ["Sin código"];
 
@@ -140,7 +168,7 @@ export default function MergerModal({ onClose, addToQueue }) {
         });
         written++;
       });
-
+      
       setStats({ written, skipped, outOfTime, failed: 0 }); 
       setMergedData(merged);
     } catch (error) {
@@ -155,7 +183,6 @@ export default function MergerModal({ onClose, addToQueue }) {
   const handlePersistData = async () => {
     if (mergedData.length === 0) return alert("No hay datos para persistir");
 
-    // CRITICAL FIX: Check for DB availability before starting the costly operation
     if (!db || typeof writeBatch !== 'function') {
         console.error("CRITICAL ERROR: Firebase/Firestore is not initialized or imported correctly. Check src/firebase.js.");
         alert("ERROR: No se pudo conectar con la base de datos. Verifica la consola.");
@@ -176,7 +203,6 @@ export default function MergerModal({ onClose, addToQueue }) {
         // 1. Fill the batch
         for (const item of chunk) {
             try { 
-                // Uses the sanitized item.productId for a valid Firestore reference
                 const productRef = doc(db, "products", item.productId);
                 
                 // CRITICAL MODIFICATION: Use batch.set with merge: true for reliability (new/existing products)
@@ -184,11 +210,10 @@ export default function MergerModal({ onClose, addToQueue }) {
                     barcodes: item.barcodes.filter(b => b !== "Sin código"), 
                     price: item.price,
                     lastUpdated: Timestamp.now(), 
-                }, { merge: true }); // <--- ESSENTIAL FIX
+                }, { merge: true }); 
                 
                 successfulWrites++;
             } catch (error) {
-                // Catches local errors (e.g., error in item data)
                 console.error(`Error al preparar batch para ${item.productId}:`, error);
                 failedWrites++;
             }
@@ -198,7 +223,6 @@ export default function MergerModal({ onClose, addToQueue }) {
         try {
             await batch.commit();
         } catch (error) {
-            // Catches network, security rule, and serious Firebase errors
             console.error(`FATAL ERROR AL PERSISTIR BATCH ${i / BATCH_SIZE}. Revisa Reglas de Seguridad o Conexión:`, error);
             failedWrites += chunk.length; 
             successfulWrites -= chunk.length; 
