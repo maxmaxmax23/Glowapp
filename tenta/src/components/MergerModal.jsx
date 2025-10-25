@@ -1,4 +1,4 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH - Conflict Resolution and Batch Writes)
+// File: src/components/MergerModal.jsx (FINAL PATCH for Persistence Reliability and Data Integrity)
 
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
@@ -63,7 +63,7 @@ export default function MergerModal({ onClose, addToQueue }) {
 
       // --- STEP 1: Build Conflict Superset and Barcode Map ---
       const eqMap = new Map();
-      const barcodeSuperset = new Set(); // Stores ALL unique barcodes from Equivalencias
+      const barcodeSuperset = new Set(); 
 
       rawEqData.forEach((row) => {
         const barcode = row[0]?.toString().trim();
@@ -71,10 +71,8 @@ export default function MergerModal({ onClose, addToQueue }) {
         const description = row[2]?.toString().trim();
         
         if (barcode && productId) {
-          // 1. Add barcode to the superset for conflict checking
           barcodeSuperset.add(barcode); 
           
-          // 2. Original mapping logic (create map of barcodes by true Product ID)
           if (!eqMap.has(productId)) eqMap.set(productId, { barcodes: new Set(), description });
           eqMap.get(productId).barcodes.add(barcode);
         }
@@ -83,16 +81,16 @@ export default function MergerModal({ onClose, addToQueue }) {
       
 
       let written = 0;
-      let skipped = 0; // Will accumulate conflict skips and format skips
+      let skipped = 0; 
       let outOfTime = 0;
       const merged = [];
       const now = new Date();
       const twelveMonthsAgo = new Date(now);
       twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
 
+      let prData = []; // This will hold the conflict-free, valid price data
+
       // --- STEP 2: Filter Obsolete IDs from Precios File (Conflict Resolution) ---
-      let prData = [];
-      
       rawPrData.forEach(row => {
           const productId = row[0]?.toString().trim();
           
@@ -100,9 +98,9 @@ export default function MergerModal({ onClose, addToQueue }) {
           // it is obsolete and should be skipped.
           if (productId && barcodeSuperset.has(productId)) {
               skipped++; 
-              return; // Skip this row entirely
+              return; 
           }
-          prData.push(row); // Keep the row if no conflict
+          prData.push(row); 
       });
       // --- END STEP 2 ---
 
@@ -116,11 +114,11 @@ export default function MergerModal({ onClose, addToQueue }) {
         
         // Validation check for fundamental errors (not conflict-related)
         if (!rawProductId || !vigenciaRaw || !priceRaw) {
-          skipped++; // Count as skipped because it's malformed
+          skipped++; 
           return;
         }
 
-        // Apply ID sanitization only to the ID that is being persisted
+        // Apply ID sanitization 
         let productId = rawProductId;
         if (productId) {
             // FIX: Replace forward slashes (Firestore delimiter) with dashes
@@ -140,7 +138,7 @@ export default function MergerModal({ onClose, addToQueue }) {
             }
           }
         } catch {
-          skipped++; // Count as skipped because of parsing error
+          skipped++; 
           return;
         }
 
@@ -151,11 +149,10 @@ export default function MergerModal({ onClose, addToQueue }) {
 
         let price = parseFloat(priceRaw.toString().replace(/\./g, "").replace(",", "."));
         if (isNaN(price)) {
-          skipped++; // Count as skipped because of price error
+          skipped++; 
           return;
         }
 
-        // Barcode lookup MUST still use the RAW ID from the Precios file
         const eqMatch = eqMap.get(rawProductId); 
         const barcodes = eqMatch ? Array.from(eqMap.get(rawProductId).barcodes) : ["Sin código"];
 
@@ -205,10 +202,11 @@ export default function MergerModal({ onClose, addToQueue }) {
             try { 
                 const productRef = doc(db, "products", item.productId);
                 
-                // CRITICAL MODIFICATION: Use batch.set with merge: true for reliability (new/existing products)
+                // CRITICAL FIX: Use setDoc with merge: true AND ensure 'description' is included in payload
                 batch.set(productRef, {
                     barcodes: item.barcodes.filter(b => b !== "Sin código"), 
                     price: item.price,
+                    description: item.description, // ESSENTIAL ADDITION TO PRESERVE DATA
                     lastUpdated: Timestamp.now(), 
                 }, { merge: true }); 
                 
