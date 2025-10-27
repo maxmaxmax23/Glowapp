@@ -1,8 +1,7 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH - Aggressive Conflict Resolution and Batch Writes)
+// File: src/components/MergerModal.jsx (FINAL PATCH - Full Schema Expansion and Persistence)
 
 import React, { useState } from "react";
 import * as XLSX from "xlsx";
-// ADDITION: Import all necessary Firestore utilities
 import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore"; 
 import { db } from "../firebase.js"; 
 import {
@@ -42,7 +41,8 @@ export default function MergerModal({ onClose, addToQueue }) {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    return XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    // header: 1 means treat the first row as data, returning an array of arrays (zero-indexed)
+    return XLSX.utils.sheet_to_json(sheet, { header: 1 }); 
   };
 
   const handleMerge = async () => {
@@ -63,7 +63,7 @@ export default function MergerModal({ onClose, addToQueue }) {
 
       // --- STEP 1: Build Conflict Superset and Barcode Map ---
       const eqMap = new Map();
-      const barcodeSuperset = new Set(); // Stores ALL unique barcodes
+      const barcodeSuperset = new Set(); 
 
       rawEqData.forEach((row) => {
         const barcode = row[0]?.toString().trim();
@@ -73,13 +73,11 @@ export default function MergerModal({ onClose, addToQueue }) {
         if (barcode && productId) {
           // 1. Check #1: Self-Referential Skip (Barcode === Product ID)
           if (barcode === productId) {
-             return; // Skip this redundant alias
+             return; 
           }
 
-          // 2. Add non-redundant barcode to the superset for cross-file conflict checking
           barcodeSuperset.add(barcode); 
           
-          // 3. Original mapping logic
           if (!eqMap.has(productId)) eqMap.set(productId, { barcodes: new Set(), description });
           eqMap.get(productId).barcodes.add(barcode);
         }
@@ -95,36 +93,39 @@ export default function MergerModal({ onClose, addToQueue }) {
       const twelveMonthsAgo = new Date(now);
       twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
 
-      // --- STEP 2: Filter Obsolete IDs from Precios File (Aggressive Conflict Check) ---
+      // --- STEP 2: Filter Obsolete IDs from Precios File (Conflict Resolution) ---
       let prData = []; 
       let conflictCount = 0;
       
-      // Filter out price rows whose ID is found as a Barcode in the Equivalencias file
       rawPrData.forEach(row => {
           const productId = row[0]?.toString().trim();
           
-          // CRITICAL CONFLICT CHECK: If the Product ID in the Precios file is found as a BARCODE, 
-          // it means this Price Row is obsolete and must be skipped to preserve accurate price data.
           if (productId && barcodeSuperset.has(productId)) {
               conflictCount++; 
-              return; // SKIP the conflicting price row
+              return; 
           }
-          prData.push(row); // Keep the row if no conflict
+          prData.push(row); 
       });
       
-      // Update skipped count with conflicts
       skipped += conflictCount;
       // --- END STEP 2 ---
 
 
       // --- STEP 3: Process Filtered Data and Finalize Merged Array ---
-      prData.forEach((row) => { // Now iterating over the conflict-free price data
+      prData.forEach((row) => { 
         let rawProductId = row[0]?.toString().trim(); 
         const description = row[1]?.toString().trim();
         const vigenciaRaw = row[4];
         const priceRaw = row[5];
         
-        // Validation check for fundamental errors (not conflict-related)
+        // ADDITION: Extract new fields (assuming indexes 6, 7, 8, 9)
+        const stockRaw = row[6];
+        const variantsRaw = row[7];
+        const providerRaw = row[8];
+        const inventoryRaw = row[9];
+        // END ADDITION
+
+        // Validation check for fundamental errors 
         if (!rawProductId || !vigenciaRaw || !priceRaw) {
           skipped++; 
           return;
@@ -133,7 +134,6 @@ export default function MergerModal({ onClose, addToQueue }) {
         // Apply ID sanitization 
         let productId = rawProductId;
         if (productId) {
-            // FIX: Replace forward slashes (Firestore delimiter) with dashes
             productId = productId.replace(/\//g, '-'); 
         }
 
@@ -165,9 +165,15 @@ export default function MergerModal({ onClose, addToQueue }) {
           return;
         }
 
-        // Barcode lookup MUST still use the RAW ID from the Precios file
         const eqMatch = eqMap.get(rawProductId); 
         const barcodes = eqMatch ? Array.from(eqMap.get(rawProductId).barcodes) : ["Sin código"];
+
+        // --- FINAL SCHEMA NORMALIZATION ---
+        const lastKnownStock = parseInt(stockRaw?.toString().trim()) || 0;
+        const currentInventory = parseInt(inventoryRaw?.toString().trim()) || 0;
+        const variants = variantsRaw?.toString().trim() || ""; // Default to empty string
+        const provider = providerRaw?.toString().trim() || ""; // Default to empty string
+        // --- END FINAL SCHEMA NORMALIZATION ---
 
         merged.push({
           productId: productId, 
@@ -175,6 +181,12 @@ export default function MergerModal({ onClose, addToQueue }) {
           barcodes,
           price,
           vigencia: vigencia.toLocaleDateString("es-AR"),
+          
+          // ADDITION: New Schema Fields
+          lastKnownStock,
+          variants,
+          provider,
+          currentInventory,
         });
         written++;
       });
@@ -215,12 +227,18 @@ export default function MergerModal({ onClose, addToQueue }) {
             try { 
                 const productRef = doc(db, "products", item.productId);
                 
-                // FINAL PAYLOAD: setDoc with merge: true for reliability
+                // FINAL PAYLOAD: Includes all new fields, guaranteed to be present (even if zero/empty string)
                 batch.set(productRef, {
                     barcodes: item.barcodes.filter(b => b !== "Sin código"), 
                     price: item.price,
-                    description: item.description, // ESSENTIAL for data integrity
+                    description: item.description, 
                     lastUpdated: Timestamp.now(), 
+                    
+                    // ADDITION: New Schema Fields
+                    lastKnownStock: item.lastKnownStock,
+                    variants: item.variants,
+                    provider: item.provider,
+                    currentInventory: item.currentInventory,
                 }, { merge: true }); 
                 
                 successfulWrites++;
