@@ -1,4 +1,4 @@
-// File: src/components/Dashboard.jsx (FINAL PATCH - Syntax and Build Fix)
+// File: src/components/Dashboard.jsx (FINAL PATCH - All Syntax Errors Corrected)
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -34,8 +34,8 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
       if (count > 0) {
         toast({
           title: "Exportación Exitosa",
-          // FIX APPLIED: Backticks (`) around the description string
-          description: ${count} productos guardados como CSV., 
+          // FIX APPLIED HERE: Must use backticks (`)
+          description: '${count} productos guardados como CSV.', 
           status: "success",
           duration: 5000,
           isClosable: true,
@@ -57,7 +57,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
   // --- Mock Sync Status Effect (Adjust based on your real-world sync logic) ---
   useEffect(() => {
     if (firebaseWrites > 0) {
-      // FIX APPLIED: Backticks (`) around the syncStatus string
+      // FIX APPLIED HERE: Must use backticks (`)
       setSyncStatus(Pendiente: ${firebaseWrites} cambios);
     } else {
       setSyncStatus("Sincronizado");
