@@ -1,4 +1,4 @@
-// File: src/components/Dashboard.jsx (FINAL PATCH - All Syntax Errors Corrected)
+// File: src/components/Dashboard.jsx (FINAL PATCH - Dependency-Free Icon Fix)
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -10,9 +10,13 @@ import {
   useToast, 
   Spinner, 
   HStack,
-  Icon // Ensure Icon is imported for the download icon
+  Icon,
+  // ADDITION: Import a standard Chakra UI icon component
+  ArrowDownIcon 
 } from "@chakra-ui/react";
-import { FiDownload } from 'react-icons/fi'; // Import a standard icon
+// REMOVED: import { FiDownload } from 'react-icons/fi'; 
+// REMOVED: react-icons dependency is no longer needed
+
 // Import the new utility file
 import { exportAllProducts } from "../utils/dataExporter"; 
 
@@ -34,7 +38,6 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
       if (count > 0) {
         toast({
           title: "Exportación Exitosa",
-          // FIX APPLIED HERE: Must use backticks (`)
           description: '${count} productos guardados como CSV.', 
           status: "success",
           duration: 5000,
@@ -57,7 +60,6 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
   // --- Mock Sync Status Effect (Adjust based on your real-world sync logic) ---
   useEffect(() => {
     if (firebaseWrites > 0) {
-      // FIX APPLIED HERE: Must use backticks (`)
       setSyncStatus('Pendiente: ${firebaseWrites} cambios');
     } else {
       setSyncStatus("Sincronizado");
@@ -92,7 +94,8 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
           w="full" 
           onClick={handleExport}
           isDisabled={isExporting}
-          leftIcon={isExporting ? <Spinner size="sm" /> : <Icon as={FiDownload} />} 
+          // FIX APPLIED: Uses the built-in ArrowDownIcon component
+          leftIcon={isExporting ? <Spinner size="sm" /> : <ArrowDownIcon />} 
         >
           {isExporting ? "Exportando..." : "Exportar Inventario a CSV"}
         </Button>
