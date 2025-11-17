@@ -1,10 +1,9 @@
-// File: src/utils/dataExporter.js
+// File: src/utils/dataExporter.js (Final Build Fix)
 
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js"; 
 
-// NOTE: You must install a CSV converter library (e.g., json-2-csv or write a custom helper).
-// For simplicity, this utility uses a basic formatting helper.
+// NOTE: Uses a basic formatting helper instead of an external library.
 
 const JSONToCSV = (objArray) => {
     // We define the headers based on the fields we finalized in the MergerModal,
@@ -87,7 +86,8 @@ export const exportAllProducts = async () => {
         
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', GLOWAPP_Export_${new Date().toISOString().slice(0, 10)}.csv);
+        // FIX APPLIED HERE: Use backticks (`) for the dynamic string in setAttribute
+        link.setAttribute('download', 'GLOWAPP_Export_${new Date().toISOString().slice(0, 10)}.csv');
         
         // Append link to body, click it, and remove it
         document.body.appendChild(link);
