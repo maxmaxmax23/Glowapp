@@ -1,4 +1,4 @@
-// File: src/components/Dashboard.jsx (FINAL PATCH - Syntax Error Fix)
+// File: src/components/Dashboard.jsx (FINAL PATCH - String Syntax Fix)
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -34,7 +34,8 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
       if (count > 0) {
         toast({
           title: "Exportación Exitosa",
-          description: ${count} productos guardados como CSV.,
+          // FIX APPLIED HERE: Change to backticks (`) to use template literal syntax
+          description: ${count} productos guardados como CSV., 
           status: "success",
           duration: 5000,
           isClosable: true,
@@ -90,7 +91,6 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
           w="full" 
           onClick={handleExport}
           isDisabled={isExporting}
-          // FIX APPLIED HERE: Correct nesting for JSX element within prop
           leftIcon={isExporting ? <Spinner size="sm" /> : <Icon as={FiDownload} />} 
         >
           {isExporting ? "Exportando..." : "Exportar Inventario a CSV"}
