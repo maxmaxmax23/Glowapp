@@ -1,68 +1,77 @@
 // File: src/components/Dashboard.jsx
+
 import React, { useState, useEffect } from "react";
-import { Box, VStack, Button, Text, Heading, Spinner } from "@chakra-ui/react";
-import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex"; // ADDITION: Import sync utilities
+import { 
+  Box, 
+  VStack, 
+  Button, 
+  Text, 
+  Heading, 
+  useToast, 
+  Spinner, 
+  HStack,
+  Icon // Ensure Icon is imported for the download icon
+} from "@chakra-ui/react";
+import { FiDownload } from 'react-icons/fi'; // Import a standard icon
+// Import the new utility file
+import { exportAllProducts } from "../utils/dataExporter"; 
 
+// Dashboard component receives props to open other modals/screens
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
-  // ADDITION: P2 State for sync status
-  const [syncStatus, setSyncStatus] = useState({
-    lastSync: 0,
-    productCount: 0,
-    missingPhotos: 0,
-    isSyncing: false,
-  });
+  // State to track if data is currently being exported
+  const [isExporting, setIsExporting] = useState(false); 
+  
+  // State for sync status (optional, depends on your existing logic)
+  const [syncStatus, setSyncStatus] = useState("Sincronizado"); 
+  const toast = useToast(); 
 
-  // ADDITION: Helper function to format the timestamp
-  const formatLastSync = (timestamp) => {
-    if (timestamp === 0) return "Nunca";
-    const date = new Date(timestamp);
-    // Use an appropriate locale for Spanish
-    return date.toLocaleString("es-AR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // ADDITION: P2 Sync Handler function
-  const handleSyncProducts = async () => {
-    if (syncStatus.isSyncing) return;
-
-    setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
+  // --- Export Handler Function ---
+  const handleExport = async () => {
+    setIsExporting(true);
     try {
-      // The utility function syncs from Firestore to IndexedDB and returns the new metadata
-      const newMetadata = await syncProductsFromFirebase();
-      setSyncStatus({ ...newMetadata, isSyncing: false });
+      const count = await exportAllProducts();
+      
+      if (count > 0) {
+        toast({
+          title: "Exportación Exitosa",
+          description: ${count} productos guardados como CSV.,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     } catch (error) {
-      console.error("Error al sincronizar productos:", error);
-      setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
+      toast({
+        title: "Fallo en la Exportación",
+        description: "Revisa la consola para errores de base de datos.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
-  // ADDITION: P2 useEffect hook to load initial status
+  // --- Mock Sync Status Effect (Adjust based on your real-world sync logic) ---
   useEffect(() => {
-    const loadInitialStatus = async () => {
-      try {
-        const metadata = await loadIndexMetadata();
-        // Load existing metadata from IndexedDB/localStorage on component mount
-        setSyncStatus({ ...metadata, isSyncing: false });
-      } catch (e) {
-        // This warning is expected if IndexedDB isn't initialized yet
-        console.warn("Could not load local index metadata.", e);
-      }
-    };
-    loadInitialStatus();
-  }, []);
+    if (firebaseWrites > 0) {
+      setSyncStatus(Pendiente: ${firebaseWrites} cambios);
+    } else {
+      setSyncStatus("Sincronizado");
+    }
+  }, [firebaseWrites]);
+  // ------------------------------------------------------------------------
 
   return (
-    <Box bg="gray.800" p={6} borderRadius="xl" shadow="lg">
-      <Heading size="lg" textAlign="center" mb={4} color="gold">
-        Dashboard
+    <Box bg="gray.800" p={6} borderRadius="xl" shadow="lg" minW="300px">
+      <Heading size="lg" textAlign="center" mb={6} color="gold">
+        GLOWAPP Control Panel
       </Heading>
 
-      <VStack spacing={3}>
+      <VStack spacing={4} align="stretch">
+        
+        {/* Core Operations */}
         <Button colorScheme="yellow" w="full" onClick={onScan}>
           Escanear Producto
         </Button>
@@ -72,39 +81,34 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
         </Button>
 
         <Button colorScheme="yellow" w="full" onClick={onOpenMerger}>
-          Combinar Archivos Excel
+          Combinar Archivos Excel (Bulk Update)
         </Button>
-
-        {/* ADDITION: P2 Sync Button and Status UI */}
-        <Box w="full" pt={4} borderTop="1px solid" borderColor="gray.700">
-          <Button
-            colorScheme="green"
-            w="full"
-            onClick={handleSyncProducts}
-            isDisabled={syncStatus.isSyncing}
-            leftIcon={syncStatus.isSyncing ? <Spinner size="sm" /> : null}
+        
+        {/* New Export Button */}
+        <Button 
+          colorScheme="blue" 
+          w="full" 
+          onClick={handleExport}
+          isDisabled={isExporting}
+          leftIcon={isExporting ? <Spinner size="sm" /> : <Icon as={FiDownload} />} 
+        >
+          {isExporting ? "Exportando..." : "Exportar Inventario a CSV"}
+        </Button>
+        {/* End Export Button */}
+        
+        {/* System Status Display */}
+        <HStack justifyContent="space-between" pt={4} borderTop="1px" borderColor="gray.700">
+          <Text fontSize="sm" color="gray.400">Estado de Sincronización:</Text>
+          <Text 
+            fontSize="sm" 
+            fontWeight="bold" 
+            color={syncStatus.startsWith("Sincronizado") ? "green.300" : "red.400"}
           >
-            {syncStatus.isSyncing ? "Sincronizando..." : "Sincronizar productos"}
-          </Button>
-          <VStack align="flex-start" mt={2} p={2} bg="gray.700" borderRadius="md" fontSize="sm">
-            <Text color="whiteAlpha.800">
-              **Indexados:** **{syncStatus.productCount}** productos
-            </Text>
-            <Text color="whiteAlpha.800">
-              **Faltan Fotos:** **{syncStatus.missingPhotos}**
-            </Text>
-            <Text color="whiteAlpha.800">
-              **Última Sincro:** {formatLastSync(syncStatus.lastSync)}
-            </Text>
-          </VStack>
-        </Box>
-        {/* END P2 ADDITION */}
+            {syncStatus}
+          </Text>
+        </HStack>
 
       </VStack>
-
-      <Text textAlign="center" mt={6} color="gold">
-        Escrituras en Firebase: {firebaseWrites}
-      </Text>
     </Box>
   );
 }
