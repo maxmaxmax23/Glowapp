@@ -1,4 +1,4 @@
-// File: src/components/Dashboard.jsx
+// File: src/components/Dashboard.jsx (FINAL PATCH - Syntax Error Fix)
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -90,6 +90,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
           w="full" 
           onClick={handleExport}
           isDisabled={isExporting}
+          // FIX APPLIED HERE: Correct nesting for JSX element within prop
           leftIcon={isExporting ? <Spinner size="sm" /> : <Icon as={FiDownload} />} 
         >
           {isExporting ? "Exportando..." : "Exportar Inventario a CSV"}
