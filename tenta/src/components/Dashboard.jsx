@@ -58,7 +58,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
   useEffect(() => {
     if (firebaseWrites > 0) {
       // FIX APPLIED HERE: Must use backticks (`)
-      setSyncStatus(Pendiente: ${firebaseWrites} cambios);
+      setSyncStatus('Pendiente: ${firebaseWrites} cambios');
     } else {
       setSyncStatus("Sincronizado");
     }
