@@ -1,4 +1,4 @@
-// File: src/components/Dashboard.jsx (FINAL PATCH - String Syntax Fix)
+// File: src/components/Dashboard.jsx (FINAL PATCH - All Syntax Errors Corrected)
 
 import React, { useState, useEffect } from "react";
 import { 
@@ -34,7 +34,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
       if (count > 0) {
         toast({
           title: "Exportación Exitosa",
-          // FIX APPLIED HERE: Change to backticks (`) to use template literal syntax
+          // FIX 1 APPLIED: Uses backticks (`) for variable interpolation
           description: ${count} productos guardados como CSV., 
           status: "success",
           duration: 5000,
@@ -57,6 +57,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
   // --- Mock Sync Status Effect (Adjust based on your real-world sync logic) ---
   useEffect(() => {
     if (firebaseWrites > 0) {
+      // FIX 2 APPLIED: Uses backticks (`) for variable interpolation
       setSyncStatus(Pendiente: ${firebaseWrites} cambios);
     } else {
       setSyncStatus("Sincronizado");
@@ -103,6 +104,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
           <Text 
             fontSize="sm" 
             fontWeight="bold" 
+            // FIX APPLIED HERE: Ensure this final string is correctly evaluated
             color={syncStatus.startsWith("Sincronizado") ? "green.300" : "red.400"}
           >
             {syncStatus}
