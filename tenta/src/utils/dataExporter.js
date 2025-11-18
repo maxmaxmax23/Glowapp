@@ -92,7 +92,7 @@ export const exportAllProducts = async () => {
         link.click();
         document.body.removeChild(link);
 
-        console.log(Export successful. ${productData.length} documents processed.);
+        console.log('Export successful. ${productData.length} documents processed.');
         return productData.length;
 
     } catch (error) {
