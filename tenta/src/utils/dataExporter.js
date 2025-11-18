@@ -1,4 +1,4 @@
-// File: src/utils/dataExporter.js (Final Build Fix)
+// File: src/utils/dataExporter.js (Final Version with photoURL Included)
 
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase.js"; 
@@ -6,14 +6,12 @@ import { db } from "../firebase.js";
 // NOTE: Uses a basic formatting helper instead of an external library.
 
 const JSONToCSV = (objArray) => {
-    // We define the headers based on the fields we finalized in the MergerModal,
-    // plus the product ID and the lastUpdated timestamp (as readable date).
     const array = typeof objArray !== 'object' ? JSON.parse(objArray) : objArray;
     
-    // Define all headers explicitly, including new schema fields
+    // MODIFICATION 1: "URL_FOTO" is correctly added to the headers
     let headers = [
         "ID_PRODUCTO", "DESCRIPCION", "PRECIO", "STOCK", "CODIGOS_BARRA", 
-        "PROVEEDOR", "VARIANTES", "ULTIMA_ACTUALIZACION"
+        "PROVEEDOR", "VARIANTES", "URL_FOTO", "ULTIMA_ACTUALIZACION" // <-- PHOTO_URL IS NOW INCLUDED
     ];
     
     let csv = headers.join(";") + "\n"; // Use semicolon (;) as delimiter for Excel compatibility
@@ -21,7 +19,6 @@ const JSONToCSV = (objArray) => {
     for (let i = 0; i < array.length; i++) {
         let line = '';
         
-        // Ensure values are safe strings (and format the complex fields)
         const formatValue = (value) => {
             if (value === null || value === undefined) return '';
             // Escape quotes and ensure single line
@@ -34,10 +31,12 @@ const JSONToCSV = (objArray) => {
         line += formatValue(item.id) + ";";
         line += formatValue(item.description) + ";";
         line += formatValue(item.price) + ";";
-        line += formatValue(item.stock) + ";"; // Assuming 'stock' is the inventory number
+        line += formatValue(item.stock) + ";"; 
         line += formatValue(item.barcodes ? item.barcodes.join(', ') : '') + ";";
         line += formatValue(item.provider) + ";";
         line += formatValue(item.variants) + ";";
+        // MODIFICATION 2: photoURL is added to the CSV data line
+        line += formatValue(item.photoURL) + ";"; 
         line += formatValue(item.lastUpdated ? new Date(item.lastUpdated).toLocaleString('es-AR') : '');
         
         csv += line + "\n";
@@ -64,10 +63,11 @@ export const exportAllProducts = async () => {
                 id: doc.id,
                 description: data.description || '',
                 price: data.price || 0,
-                stock: data.currentInventory || data.stock || 0, // Use the new inventory field or fallback
+                stock: data.currentInventory || data.stock || 0, 
                 barcodes: data.barcodes || [],
                 provider: data.provider || '',
                 variants: data.variants || '',
+                photoURL: data.photoURL || '', // <-- Ensures photoURL is pulled from Firestore
                 lastUpdated: data.lastUpdated?.toMillis() || 0,
             };
         });
@@ -81,20 +81,18 @@ export const exportAllProducts = async () => {
         const csvContent = JSONToCSV(productData);
 
         // Step 3: Trigger browser download
-        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel compatibility (U+FEFF)
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel compatibility
         const url = URL.createObjectURL(blob);
         
         const link = document.createElement('a');
         link.href = url;
-        // FIX APPLIED HERE: Use backticks (`) for the dynamic string in setAttribute
         link.setAttribute('download', 'GLOWAPP_Export_${new Date().toISOString().slice(0, 10)}.csv');
         
-        // Append link to body, click it, and remove it
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
 
-        console.log('Export successful. ${productData.length} documents processed.');
+        console.log(Export successful. ${productData.length} documents processed.);
         return productData.length;
 
     } catch (error) {
