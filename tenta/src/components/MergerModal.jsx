@@ -1,10 +1,11 @@
-// File: src/components/MergerModal.jsx (FINAL PATCH - Logic Extracted)
+// File: src/components/MergerModal.jsx (FINAL PATCH - Multi-Strategy Persistence)
 
 import React, { useState } from "react";
-// REMOVED: * as XLSX, removed manual date/parsing logic
+// Import Storage and Firestore modules
 import { doc, setDoc, Timestamp, writeBatch } from "firebase/firestore"; 
-import { db } from "../firebase.js"; 
-// ADDITION: Import the new external utility
+import { ref, uploadBytes } from "firebase/storage";
+import { db, storage } from "../firebase.js"; 
+// Import the external parsing utility
 import { processExcelFiles } from "../utils/mergeProcessor"; 
 import {
   Box,
@@ -35,14 +36,14 @@ export default function MergerModal({ onClose, addToQueue }) { 
   const [equivalenciasFile, setEquivalenciasFile] = useState(null);
   const [preciosFile, setPreciosFile] = useState(null);
   const [mergedData, setMergedData] = useState([]);
-  // Now includes 'failed' which is updated during persistence
   const [stats, setStats] = useState({ written: 0, skipped: 0, outOfTime: 0, failed: 0 }); 
   const [loading, setLoading] = useState(false);
   const [persisting, setPersisting] = useState(false); 
   const [progress, setProgress] = useState(0); 
+  // State to select the destination (Firestore collection or Storage file)
   const [targetCollection, setTargetCollection] = useState("products");
 
-  // MODIFIED: handleMerge is now simplified to just call the external utility
+  // MODIFIED: handleMerge is simplified to just call the external utility
   const handleMerge = async () => {
     if (!equivalenciasFile || !preciosFile) {
       alert("Selecciona ambos archivos antes de continuar.");
@@ -68,11 +69,19 @@ export default function MergerModal({ onClose, addToQueue }) { 
   const handlePersistData = async () => {
     if (mergedData.length === 0) return alert("No hay datos para persistir");
 
+    // CRITICAL: Check both DB and STORAGE are available
     if (!db || typeof writeBatch !== 'function') {
-        console.error("CRITICAL ERROR: Firebase/Firestore is not initialized or imported correctly.");
-        alert("ERROR: No se pudo conectar con la base de datos. Verifica la consola.");
+        console.error("CRITICAL ERROR: Firestore not initialized.");
+        alert("ERROR: No se pudo conectar con la base de datos.");
         setPersisting(false);
-        return; 
+        return; 
+    }
+    // Check storage availability for Strategy B path
+    if (targetCollection === "products_location_b" && !storage) {
+        console.error("CRITICAL ERROR: Storage not initialized for Location B upload.");
+        alert("ERROR: No se pudo conectar con el almacenamiento de archivos.");
+        setPersisting(false);
+        return; 
     }
     
     setPersisting(true); 
@@ -81,62 +90,104 @@ export default function MergerModal({ onClose, addToQueue }) { 
     let successfulWrites = 0;
     let failedWrites = 0;
     
-    console.log(`Starting Batch Upload to Collection: ${targetCollection}`);
+    console.log(`Starting Upload to Collection: ${targetCollection}`);
 
-    for (let i = 0; i < totalItems; i += BATCH_SIZE) {
-        let batch = writeBatch(db);
-        const chunk = mergedData.slice(i, i + BATCH_SIZE);
-        
-        for (const item of chunk) {
-            try { 
-                // Dynamic collection name is used here
-                const productRef = doc(db, targetCollection, item.productId);
+    try {
+        // STRATEGY A: PRINCIPAL (Firestore Batch Writes - High Cost/High Integrity)
+        if (targetCollection === "products") {
+            
+            for (let i = 0; i < totalItems; i += BATCH_SIZE) {
+                let batch = writeBatch(db);
+                const chunk = mergedData.slice(i, i + BATCH_SIZE);
                 
-                batch.set(productRef, {
-                    barcodes: item.barcodes.filter(b => b !== "Sin código"), 
-                    price: item.price,
-                    description: item.description, 
-                    lastUpdated: Timestamp.now(), 
-                    
-                    lastKnownStock: item.lastKnownStock,
-                    variants: item.variants,
-                    provider: item.provider,
-                    currentInventory: item.currentInventory,
-                }, { merge: true }); 
+                for (const item of chunk) {
+                    try { 
+                        const productRef = doc(db, targetCollection, item.productId);
+                        
+                        batch.set(productRef, {
+                            barcodes: item.barcodes.filter(b => b !== "Sin código"), 
+                            price: item.price,
+                            description: item.description, 
+                            lastUpdated: Timestamp.now(), 
+                            
+                            lastKnownStock: item.lastKnownStock,
+                            variants: item.variants,
+                            provider: item.provider,
+                            currentInventory: item.currentInventory,
+                        }, { merge: true }); 
+                        
+                        successfulWrites++;
+                    } catch (error) {
+                        console.error(`Error al preparar batch para ${item.productId}:`, error);
+                        failedWrites++;
+                    }
+                }
+
+                try {
+                    await batch.commit();
+                } catch (error) {
+                    console.error(`FATAL ERROR AL PERSISTIR BATCH ${i / BATCH_SIZE}:`, error);
+                    failedWrites += chunk.length; 
+                    successfulWrites -= chunk.length; 
+                    break; 
+                }
                 
-                successfulWrites++;
-            } catch (error) {
-                console.error(`Error al preparar batch para ${item.productId}:`, error);
-                failedWrites++;
+                const newProgress = ((i + BATCH_SIZE) / totalItems) * 100;
+                setProgress(Math.min(newProgress, 100));
             }
+            // If successful, successfulWrites holds the final count from the inner loop.
+
+        // STRATEGY B: LOCATION B (Storage JSON File - Low Cost/Bulk Sync)
+        } else {
+            console.log("Modo: Location B (Storage JSON)");
+            setProgress(30);
+
+            // 1. Convert Data to JSON String
+            const jsonString = JSON.stringify(mergedData);
+            const blob = new Blob([jsonString], { type: "application/json" });
+
+            // 2. Upload to Firebase Storage
+            const storageRef = ref(storage, "indexes/location_b.json");
+            await uploadBytes(storageRef, blob);
+            
+            // 3. Update Metadata in Firestore (Sync Flag)
+            await setDoc(doc(db, "system", "metadata"), {
+                locationB_lastUpdated: Timestamp.now(),
+                locationB_count: mergedData.length
+            }, { merge: true });
+
+            // CRITICAL FIX: Set success count manually for the JSON path
+            successfulWrites = mergedData.length; 
+            setProgress(100);
         }
 
-        try {
-            await batch.commit();
-        } catch (error) {
-            console.error(`FATAL ERROR AL PERSISTIR BATCH ${i / BATCH_SIZE}:`, error);
-            failedWrites += chunk.length; 
-            successfulWrites -= chunk.length; 
-            break; 
-        }
+        // Finalize stats update based on successfulWrites from EITHER path
+        setStats(prev => ({ 
+            ...prev, 
+            written: Math.max(0, successfulWrites), 
+            failed: failedWrites,
+        })); 
         
-        const newProgress = ((i + BATCH_SIZE) / totalItems) * 100;
-        setProgress(Math.min(newProgress, 100));
-    }
+        alert(`Carga Completa en "${targetCollection === 'products' ? 'Principal' : 'Ubicación B'}".\n${Math.max(0, successfulWrites)} productos persistidos.`);
 
-    setPersisting(false);
-    
-    setStats(prev => ({ 
-        ...prev, 
-        written: Math.max(0, successfulWrites), 
-        failed: failedWrites,
-    })); 
-    
-    alert(`Carga Completa en "${targetCollection === 'products' ? 'Principal' : 'Ubicación B'}".\n${Math.max(0, successfulWrites)} productos persistidos.`);
-    
-    setMergedData([]);
-    setEquivalenciasFile(null);
-    setPreciosFile(null);
+        // Cleanup
+        setMergedData([]);
+        setEquivalenciasFile(null);
+        setPreciosFile(null);
+
+    } catch (error) {
+        console.error("Error persistiendo datos:", error);
+        alert("Error al subir los datos. Revisa la consola para errores críticos.");
+        
+        // Ensure failed count is updated in the event of a catastrophic failure
+        setStats(prev => ({ 
+            ...prev, 
+            failed: prev.failed + totalItems, 
+            written: 0 
+        }));
+    } finally {
+        setPersisting(false);
+    }
   };
 
   const handleAddToQueue = () => { }; 
