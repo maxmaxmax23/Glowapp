@@ -3,7 +3,7 @@ import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex
 import AurumHeader from "./AurumHeader";
 import { motion } from "framer-motion";
 
-export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
+export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpenPhotos, firebaseWrites }) {
   const [syncStatus, setSyncStatus] = useState({
     lastSync: 0,
     productCount: 0,
@@ -69,6 +69,9 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
             </button>
             <button className="aurum-btn-secondary" onClick={onOpenMerger}>
               Combinar Excel
+            </button>
+            <button className="aurum-btn-secondary col-span-2" onClick={onOpenPhotos}>
+              Carga Masiva WebP
             </button>
           </div>
         </div>
