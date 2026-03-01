@@ -9,9 +9,8 @@ import MergerModal from "./components/MergerModal.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
-  // MODIFICATION: Holds the full product OBJECT.
-  const [selectedProduct, setSelectedProduct] = useState(null); 
-  
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
   const [showScanner, setShowScanner] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
   const [showMerger, setShowMerger] = useState(false);
@@ -19,28 +18,37 @@ export default function App() {
 
   const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
 
-  // ADDITION: New handler to process the full product result from the Scanner
   const handleProductSelect = (productObject) => {
-    // 1. Set the product object state
     if (productObject && productObject.id) {
-        setSelectedProduct(productObject);
+      setSelectedProduct(productObject);
     } else {
-        console.error("Product selected without valid ID. State remains unchanged.");
-        // We do not alert the user here, we just fail silently and close the scanner.
+      console.error("Product selected without valid ID. State remains unchanged.");
     }
-    // 2. CRITICAL FIX: App.jsx is now responsible for closing the ScannerModal
-    setShowScanner(false); 
+    setShowScanner(false);
   };
 
   return (
-    <div className="min-h-screen bg-black text-gold flex items-center justify-center">
+    <div className="min-h-screen bg-black text-textLight50 flex items-center justify-center font-sans antialiased text-rendering-optimizeLegibility selection:bg-amber-400 selection:text-black">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+
+        {/* Subtle radial gradient to create depth */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-neutral-900/60 via-black to-black"></div>
+
+        {/* Amber glow effects */}
+        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-amber-600/5 rounded-full blur-[120px] mix-blend-screen animate-pulse-slow"></div>
+        <div className="absolute bottom-0 left-1/4 w-[800px] h-[800px] bg-amber-400/5 rounded-full blur-[150px] mix-blend-screen"></div>
+
+        {/* Optional noise texture (requires a generic noise.png or CSS noise) */}
+        {/* <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: "url('/noise.png')", backgroundRepeat: "repeat" }}></div> */}
+      </div>
+
       {!user ? (
         <LoginForm onLogin={setUser} />
       ) : selectedProduct ? (
-        // MODIFICATION: Pass the full product object down to the ProductModal
-        <ProductModal 
-            product={selectedProduct} 
-            onClose={() => setSelectedProduct(null)} 
+        <ProductModal
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
         />
       ) : (
         <>
@@ -54,8 +62,7 @@ export default function App() {
           {showScanner && (
             <ScannerModal
               onClose={() => setShowScanner(false)}
-              // MODIFICATION: Now uses the new handler to manage the product object
-              onSelectProduct={handleProductSelect} 
+              onSelectProduct={handleProductSelect}
             />
           )}
 
@@ -67,8 +74,7 @@ export default function App() {
           )}
 
           {showMerger && (
-            // NOTE: The addToQueue prop has been deprecated by the patch in MergerModal.jsx
-            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => {}} /> 
+            <MergerModal onClose={() => setShowMerger(false)} addToQueue={() => { }} />
           )}
         </>
       )}

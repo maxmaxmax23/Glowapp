@@ -3,14 +3,8 @@ import React, { useState } from "react";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase.js";
 import PropTypes from "prop-types";
-import {
-  Box,
-  VStack,
-  Text,
-  Button,
-  Progress,
-  CloseButton,
-} from "@chakra-ui/react";
+import { motion, AnimatePresence } from "framer-motion";
+import AurumHeader from "./AurumHeader";
 
 export default function ImporterModal({ queuedData, onClose }) {
   const [loading, setLoading] = useState(false);
@@ -45,79 +39,96 @@ export default function ImporterModal({ queuedData, onClose }) {
 
       await batch.commit();
       setProgress({ total: queuedData.length, written: writtenCount });
-      alert(`✅ Import completed. Written ${writtenCount} items.`);
+      alert(`✅ Importación completada. Se escribieron ${writtenCount} items.`);
     } catch (err) {
       console.error("Error importing products:", err);
-      alert(`Error importing products: ${err.message}`);
+      alert(`Error al importar: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box
-      position="fixed"
-      inset={0}
-      bg="blackAlpha.900"
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      justifyContent="center"
-      p={4}
-      zIndex={50}
-      overflowY="auto"
-    >
-      <Box
-        maxW="md"
-        w="full"
-        bg="gray.900"
-        color="gold"
-        borderRadius="xl"
-        p={4}
-        textAlign="center"
-      >
-        <VStack spacing={3}>
-          <Text fontSize="xl" fontWeight="bold">
-            Importar Productos
-          </Text>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={!loading ? onClose : undefined}
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        />
 
-          <Button
-            onClick={handleImport}
-            colorScheme="gold"
-            w="full"
-            isLoading={loading}
-            loadingText="Importando..."
-          >
-            Importar datos a Firebase
-          </Button>
+        {/* Modal Content */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="z-10 w-full max-w-md bg-backgroundDark900 border border-borderDark800 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        >
+          <div className="p-6 border-b border-borderDark800 bg-backgroundDark950 flex justify-between items-center">
+            <h2 className="text-xl font-light text-textLight50">Importar Productos</h2>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-backgroundDark900 hover:bg-borderDark800 text-textDark400 hover:text-white transition-colors border border-borderDark800 disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
-          {progress.total > 0 && (
-            <Box w="full">
-              <Text fontSize="sm" mb={1}>
-                Escritos: {progress.written} / {progress.total}
-              </Text>
-              <Progress
-                value={(progress.written / progress.total) * 100}
-                size="sm"
-                colorScheme="gold"
-                borderRadius="md"
-              />
-            </Box>
-          )}
+          <div className="p-6 space-y-6">
+            <p className="text-textDark400 text-sm text-center">
+              Asegúrate de tener un archivo válido antes de importar la data a Firebase.
+              {queuedData.length > 0 && ` (${String(queuedData.length)} en cola)`}
+            </p>
 
-          <Button
-            onClick={onClose}
-            variant="outline"
-            borderColor="gold"
-            color="gold"
-            _hover={{ bg: "gold", color: "black" }}
-            w="full"
-          >
-            Cerrar
-          </Button>
-        </VStack>
-      </Box>
-    </Box>
+            <button
+              onClick={handleImport}
+              disabled={loading || !queuedData || queuedData.length === 0}
+              className="aurum-btn-primary w-full shadow-[0_0_15px_rgba(251,191,36,0.3)]"
+            >
+              {loading ? (
+                <span className="flex items-center space-x-2">
+                  <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Importando...</span>
+                </span>
+              ) : "Importar a Firebase"}
+            </button>
+
+            {progress.total > 0 && (
+              <div className="space-y-2 mt-4">
+                <div className="flex justify-between text-xs text-textDark400 font-medium">
+                  <span>Progreso</span>
+                  <span>{progress.written} / {progress.total}</span>
+                </div>
+                <div className="w-full bg-backgroundDark950 h-2 rounded-full overflow-hidden border border-borderDark800">
+                  <div
+                    className="h-full bg-amber400 shadow-[0_0_10px_rgba(251,191,36,1)] transition-all duration-300"
+                    style={{ width: `${(progress.written / progress.total) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="aurum-btn-secondary w-full disabled:opacity-50"
+            >
+              Cerrar
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }
 

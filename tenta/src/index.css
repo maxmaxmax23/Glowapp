@@ -2,33 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --gold: #FFD700;
+@layer base {
+  body {
+    @apply bg-black text-textLight50 font-sans min-h-screen selection:bg-amber400 selection:text-black;
+  }
 }
 
-body {
-  @apply bg-black text-white font-sans min-h-screen;
+/* Base custom classes to match the Aurum vibe */
+@layer components {
+  /* Headings */
+  .aurum-title-immersive {
+    @apply text-5xl md:text-6xl font-thin tracking-tight text-textLight50;
+  }
+  
+  .aurum-title-stack {
+    @apply text-3xl font-light tracking-tight text-textLight50;
+  }
+
+  .aurum-subtitle {
+    @apply text-xs md:text-sm uppercase tracking-widest font-bold text-amber400;
+  }
+
+  /* Cards */
+  .aurum-card {
+    @apply bg-backgroundDark900 border border-borderDark800 rounded-2xl p-5 md:p-6 shadow-xl;
+  }
+  
+  .aurum-card-inner {
+    @apply bg-backgroundDark950 rounded-xl p-4;
+  }
+
+  /* Inputs */
+  .aurum-input {
+    @apply w-full bg-backgroundDark950 border border-borderDark800 rounded-xl h-14 px-4 text-textLight50 placeholder-textDark400 focus:outline-none focus:ring-1 focus:ring-amber400 focus:border-amber400 transition-all duration-300;
+  }
+
+  /* Buttons */
+  .aurum-btn-primary {
+    @apply bg-amber400 text-black font-semibold rounded-full px-6 py-3 flex items-center justify-center transition-all duration-300 hover:bg-amber-300 active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+  
+  .aurum-btn-secondary {
+    @apply bg-transparent border border-amber400 text-amber400 font-semibold rounded-full px-6 py-3 flex items-center justify-center transition-all duration-300 hover:bg-amber400/10 active:scale-95 disabled:opacity-50 disabled:active:scale-100;
+  }
+
+  .aurum-btn-ghost {
+    @apply bg-transparent text-textDark400 font-medium px-4 py-2 rounded-full transition-all duration-300 hover:text-textLight50 active:scale-95;
+  }
+  
+  .aurum-btn-icon-circular {
+    @apply w-10 h-10 rounded-full border border-borderDark800 flex items-center justify-center text-textLight50 transition-all duration-300 hover:bg-white/5 active:scale-90 opacity-70 hover:opacity-100;
+  }
 }
 
-.text-gold {
-  color: var(--gold);
+/* Custom Scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-/* Animations */
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+::-webkit-scrollbar-track {
+  background: #000000;
 }
 
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
+::-webkit-scrollbar-thumb {
+  background: #262626; /* borderDark800 */
+  border-radius: 3px;
 }
 
-@keyframes fade-in-down {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in-down {
-  animation: fade-in-down 0.4s ease-out forwards;
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
 }

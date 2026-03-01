@@ -7,10 +7,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        gold: "#d4af37",
+        // Core Web "Tokens" mimicking Aurum Gluestack
         black: "#000000",
-        graydark: "#1c1c1c",
-        graylight: "#2c2c2c",
+        backgroundDark900: "#171717", // neutral-900 equivalent
+        backgroundDark950: "#0a0a0a", // neutral-950 equivalent
+        amber400: "#fbbf24", // amber-400
+        textLight50: "#fafafa", // neutral-50
+        textDark400: "#a3a3a3", // neutral-400
+        borderDark800: "#262626", // neutral-800
+        red400: "#f87171",
+        red500: "#ef4444",
+        green500: "#22c55e",
+        lime400: "#a3e635",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

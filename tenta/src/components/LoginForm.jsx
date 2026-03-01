@@ -6,16 +6,8 @@
 import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase.js";
-import {
-  Box,
-  VStack,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Heading,
-} from "@chakra-ui/react";
+import { motion } from "framer-motion";
+import AurumHeader from "./AurumHeader";
 
 export default function LoginForm({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -33,59 +25,55 @@ export default function LoginForm({ onLogin }) {
   };
 
   return (
-    <Box
-      bg="gray.900"
-      color="white"
-      p={6}
-      rounded="xl"
-      shadow="lg"
-      w="96"
-      textAlign="center"
-    >
-      <Heading as="h2" size="lg" mb={4} color="gold">
-        Iniciar sesión
-      </Heading>
+    <div className="w-full flex justify-center items-center min-h-screen px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="w-full max-w-md aurum-card flex flex-col space-y-6"
+      >
+        <AurumHeader
+          title="Glow"
+          subtitle="INICIAR SESIÓN"
+          variant="immersive"
+        />
 
-      <form onSubmit={handleLogin}>
-        <VStack spacing={3} align="stretch">
-          <FormControl>
-            <Input
+        <form onSubmit={handleLogin} className="flex flex-col space-y-4">
+          <div>
+            <input
+              type="email"
               placeholder="Email"
+              className="aurum-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              bg="white"
-              color="black"
+              required
             />
-          </FormControl>
-
-          <FormControl>
-            <Input
+          </div>
+          <div>
+            <input
               type="password"
               placeholder="Contraseña"
+              className="aurum-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              bg="white"
-              color="black"
+              required
             />
-          </FormControl>
+          </div>
 
           {error && (
-            <Text color="red.500" fontSize="sm" textAlign="center">
+            <p className="text-red500 text-sm text-center">
               {error}
-            </Text>
+            </p>
           )}
 
-          <Button
+          <button
             type="submit"
-            colorScheme="yellow"
-            w="full"
-            fontWeight="bold"
-            _hover={{ bg: "yellow.400" }}
+            className="aurum-btn-primary mt-2"
           >
             Entrar
-          </Button>
-        </VStack>
-      </form>
-    </Box>
+          </button>
+        </form>
+      </motion.div>
+    </div>
   );
 }
