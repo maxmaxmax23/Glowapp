@@ -7,6 +7,12 @@ All notable changes to the **Glowapp Webadmin** project will be documented in th
 ## [Unreleased / Latest] - 2026-03-01
 
 ### Added
+- **RawPhotoExtractor (Admin Feature)**:
+  - Client-side extraction tool for downloading batches of raw images needing AI enhancement.
+  - Queries Firestore queue (`imageStatus: 'raw'`) respecting memory limits (max 100/batch).
+  - Implements concurrency locks using Batch Writes (`imageStatus: 'processing'`) to prevent duplicates.
+  - Zips files perfectly in-memory using `jszip` without utilizing server computing.
+  - Includes a 'Ghost File' safety net to handle storage anomalies, auto-flagging them as `missing` in DB.
 - **BulkPhotoDropzone (Admin Feature)**:
   - Smart drag-and-drop area for uploading AI-enhanced product photos.
   - Native browser `.webp` image conversion (Canvas API) to significantly reduce Firebase Storage costs and bandwidth.

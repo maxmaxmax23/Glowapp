@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex";
 import AurumHeader from "./AurumHeader";
 import { motion } from "framer-motion";
+import RawPhotoExtractor from "./admin/RawPhotoExtractor";
 
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpenPhotos, firebaseWrites }) {
   const [syncStatus, setSyncStatus] = useState({
@@ -56,7 +57,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpen
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-        className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6"
+        className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6 pb-12"
       >
         <div className="flex flex-col space-y-4">
           <button className="aurum-btn-primary" onClick={onScan}>
@@ -108,6 +109,11 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpen
               <span className="text-textLight50 text-right">{formatLastSync(syncStatus.lastSync)}</span>
             </div>
           </div>
+        </div>
+
+        {/* Raw Photo Extractor Auto-Widget */}
+        <div className="mt-4">
+          <RawPhotoExtractor />
         </div>
 
         <div className="mt-auto py-8">
