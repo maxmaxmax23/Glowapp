@@ -29,7 +29,7 @@ const ErrorIcon = () => (
     </svg>
 );
 
-const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_MB = 10;
 
 // WebP Conversion Utility
 const convertToWebP = (file) => {
