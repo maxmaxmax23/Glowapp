@@ -1,7 +1,5 @@
-// File: src/components/Dashboard.jsx
 import React, { useState, useEffect } from "react";
 import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex";
-import { exportAllProducts } from "../utils/dataExporter";
 import AurumHeader from "./AurumHeader";
 import { motion } from "framer-motion";
 
@@ -12,8 +10,6 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
     missingPhotos: 0,
     isSyncing: false,
   });
-  const [isExporting, setIsExporting] = useState(false);
-  const [exportMessage, setExportMessage] = useState("");
 
   const formatLastSync = (timestamp) => {
     if (timestamp === 0) return "Nunca";
@@ -35,26 +31,8 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
       const newMetadata = await syncProductsFromFirebase();
       setSyncStatus({ ...newMetadata, isSyncing: false });
     } catch (error) {
-      console.error(error);
+      console.error("Error al sincronizar productos:", error);
       setSyncStatus((prev) => ({ ...prev, isSyncing: false }));
-    }
-  };
-
-  const handleExport = async () => {
-    setIsExporting(true);
-    setExportMessage("");
-    try {
-      const count = await exportAllProducts();
-
-      if (count > 0) {
-        setExportMessage(`✅ ${count} productos guardados como CSV.`);
-        setTimeout(() => setExportMessage(""), 5000);
-      }
-    } catch (error) {
-      setExportMessage("❌ Error al exportar");
-      setTimeout(() => setExportMessage(""), 5000);
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -78,7 +56,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-        className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6 pb-8"
+        className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6"
       >
         <div className="flex flex-col space-y-4">
           <button className="aurum-btn-primary" onClick={onScan}>
@@ -93,33 +71,12 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
               Combinar Excel
             </button>
           </div>
-
-          <button
-            className="w-full rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-semibold py-3 transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2"
-            onClick={handleExport}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Exportando...
-              </>
-            ) : "Exportar Inventario a CSV"}
-          </button>
-          {exportMessage && (
-            <div className="text-center text-sm font-medium animate-pulse text-textLight50">
-              {exportMessage}
-            </div>
-          )}
         </div>
 
         {/* Sync Status Card */}
         <div className="aurum-card mt-8">
           <button
-            className="w-full rounded-xl bg-green-500 hover:bg-green-400 active:scale-95 text-black font-semibold py-3 transition-all duration-300 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
+            className="w-full rounded-xl bg-green500 hover:bg-green-400 active:scale-95 text-black font-semibold py-3 transition-all duration-300 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
             onClick={handleSyncProducts}
             disabled={syncStatus.isSyncing}
           >
