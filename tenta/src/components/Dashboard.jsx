@@ -1,10 +1,9 @@
-// File: src/components/Dashboard.jsx
 import React, { useState, useEffect } from "react";
-import { Box, VStack, Button, Text, Heading, Spinner } from "@chakra-ui/react";
-import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex"; // ADDITION: Import sync utilities
+import { loadIndexMetadata, syncProductsFromFirebase } from "../utils/localIndex";
+import AurumHeader from "./AurumHeader";
+import { motion } from "framer-motion";
 
 export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, firebaseWrites }) {
-  // ADDITION: P2 State for sync status
   const [syncStatus, setSyncStatus] = useState({
     lastSync: 0,
     productCount: 0,
@@ -12,11 +11,9 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
     isSyncing: false,
   });
 
-  // ADDITION: Helper function to format the timestamp
   const formatLastSync = (timestamp) => {
     if (timestamp === 0) return "Nunca";
     const date = new Date(timestamp);
-    // Use an appropriate locale for Spanish
     return date.toLocaleString("es-AR", {
       year: "numeric",
       month: "2-digit",
@@ -26,13 +23,11 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
     });
   };
 
-  // ADDITION: P2 Sync Handler function
   const handleSyncProducts = async () => {
     if (syncStatus.isSyncing) return;
 
     setSyncStatus((prev) => ({ ...prev, isSyncing: true }));
     try {
-      // The utility function syncs from Firestore to IndexedDB and returns the new metadata
       const newMetadata = await syncProductsFromFirebase();
       setSyncStatus({ ...newMetadata, isSyncing: false });
     } catch (error) {
@@ -41,15 +36,12 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
     }
   };
 
-  // ADDITION: P2 useEffect hook to load initial status
   useEffect(() => {
     const loadInitialStatus = async () => {
       try {
         const metadata = await loadIndexMetadata();
-        // Load existing metadata from IndexedDB/localStorage on component mount
         setSyncStatus({ ...metadata, isSyncing: false });
       } catch (e) {
-        // This warning is expected if IndexedDB isn't initialized yet
         console.warn("Could not load local index metadata.", e);
       }
     };
@@ -57,54 +49,68 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, fireba
   }, []);
 
   return (
-    <Box bg="gray.800" p={6} borderRadius="xl" shadow="lg">
-      <Heading size="lg" textAlign="center" mb={4} color="gold">
-        Dashboard
-      </Heading>
+    <div className="w-full min-h-screen bg-black flex flex-col items-center">
+      <AurumHeader title="Dashboard" variant="immersive" />
 
-      <VStack spacing={3}>
-        <Button colorScheme="yellow" w="full" onClick={onScan}>
-          Escanear Producto
-        </Button>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+        className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6"
+      >
+        <div className="flex flex-col space-y-4">
+          <button className="aurum-btn-primary" onClick={onScan}>
+            <span className="flex-1 text-center">Escanear Producto</span>
+          </button>
 
-        <Button colorScheme="yellow" w="full" onClick={onOpenImporter}>
-          Importar JSON
-        </Button>
+          <div className="grid grid-cols-2 gap-4">
+            <button className="aurum-btn-secondary" onClick={onOpenImporter}>
+              Importar JSON
+            </button>
+            <button className="aurum-btn-secondary" onClick={onOpenMerger}>
+              Combinar Excel
+            </button>
+          </div>
+        </div>
 
-        <Button colorScheme="yellow" w="full" onClick={onOpenMerger}>
-          Combinar Archivos Excel
-        </Button>
-
-        {/* ADDITION: P2 Sync Button and Status UI */}
-        <Box w="full" pt={4} borderTop="1px solid" borderColor="gray.700">
-          <Button
-            colorScheme="green"
-            w="full"
+        {/* Sync Status Card */}
+        <div className="aurum-card mt-8">
+          <button
+            className="w-full rounded-xl bg-green500 hover:bg-green-400 active:scale-95 text-black font-semibold py-3 transition-all duration-300 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
             onClick={handleSyncProducts}
-            isDisabled={syncStatus.isSyncing}
-            leftIcon={syncStatus.isSyncing ? <Spinner size="sm" /> : null}
+            disabled={syncStatus.isSyncing}
           >
-            {syncStatus.isSyncing ? "Sincronizando..." : "Sincronizar productos"}
-          </Button>
-          <VStack align="flex-start" mt={2} p={2} bg="gray.700" borderRadius="md" fontSize="sm">
-            <Text color="whiteAlpha.800">
-              **Indexados:** **{syncStatus.productCount}** productos
-            </Text>
-            <Text color="whiteAlpha.800">
-              **Faltan Fotos:** **{syncStatus.missingPhotos}**
-            </Text>
-            <Text color="whiteAlpha.800">
-              **Última Sincro:** {formatLastSync(syncStatus.lastSync)}
-            </Text>
-          </VStack>
-        </Box>
-        {/* END P2 ADDITION */}
+            {syncStatus.isSyncing ? (
+              <span className="flex items-center space-x-2">
+                <svg className="animate-spin h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Sincronizando...</span>
+              </span>
+            ) : "Sincronizar productos"}
+          </button>
 
-      </VStack>
+          <div className="mt-4 pt-4 border-t border-borderDark800 space-y-2 text-sm">
+            <div className="flex justify-between items-center text-textDark400">
+              <span>Indexados:</span>
+              <span className="text-textLight50 font-medium">{syncStatus.productCount}</span>
+            </div>
+            <div className="flex justify-between items-center text-textDark400">
+              <span>Faltan Fotos:</span>
+              <span className="text-amber400 font-medium">{syncStatus.missingPhotos}</span>
+            </div>
+            <div className="flex justify-between items-center text-textDark400 pb-2">
+              <span>Última Sincro:</span>
+              <span className="text-textLight50 text-right">{formatLastSync(syncStatus.lastSync)}</span>
+            </div>
+          </div>
+        </div>
 
-      <Text textAlign="center" mt={6} color="gold">
-        Escrituras en Firebase: {firebaseWrites}
-      </Text>
-    </Box>
+        <div className="mt-auto py-8">
+          <p className="text-center text-textDark400 text-sm">Escrituras en Firebase: <span className="text-amber400 font-bold">{firebaseWrites}</span></p>
+        </div>
+      </motion.div>
+    </div>
   );
 }

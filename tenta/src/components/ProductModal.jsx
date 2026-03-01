@@ -1,42 +1,23 @@
 // File: src/components/ProductModal.jsx (PATCHED - Local Cache Priority)
-
 import { useState, useEffect } from "react";
-// ADDITION: Import local index utility
-import { lookupLocalProduct } from "../utils/localIndex.js"; 
+import { lookupLocalProduct } from "../utils/localIndex.js";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import ProductUploaderModal from "./ProductUploaderModal.jsx";
-import {
-  Drawer,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerHeader,
-  DrawerBody,
-  DrawerFooter,
-  Button,
-  Image,
-  Text,
-  VStack,
-  Box,
-  Spinner, // ADDITION: Import Spinner for loading state
-} from "@chakra-ui/react";
+import AurumHeader from "./AurumHeader";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProductModal({ product: initialProduct, onClose }) {
-  // MODIFICATION: Use local state to manage the product, initializing with the prop
-  // The prop 'product' now contains the full object from the scanner's successful lookup (from App.jsx)
-  const [product, setProduct] = useState(initialProduct); 
+  const [product, setProduct] = useState(initialProduct);
   const [showUploader, setShowUploader] = useState(false);
-  const [loading, setLoading] = useState(true); // ADDITION: New loading state
+  const [loading, setLoading] = useState(true);
 
-  // We need the ID from the prop, as App.jsx now sends the full object
-  const productId = initialProduct?.id; 
+  const productId = initialProduct?.id;
 
   useEffect(() => {
-    // MODIFICATION: Check if the initial product data is complete enough (e.g., has price/description).
-    // If App.jsx passes the full object, we don't need to do a fetch.
     if (product && product.price) {
       setLoading(false);
-      return; 
+      return;
     }
 
     const fetchProduct = async () => {
@@ -45,13 +26,11 @@ export default function ProductModal({ product: initialProduct, onClose }) {
         setLoading(false);
         return;
       }
-      
+
       setLoading(true);
       let productData = null;
 
-      // 1. ATTEMPT LOCAL LOOKUP (Cost-Optimized Path)
       try {
-        // Use lookupLocalProduct which handles IDs and returns an array.
         const localResults = await lookupLocalProduct(productId);
         if (localResults && localResults.length > 0) {
           productData = localResults[0];
@@ -60,13 +39,12 @@ export default function ProductModal({ product: initialProduct, onClose }) {
       } catch (localErr) {
         console.warn("Local cache lookup error, falling back to Firestore:", localErr);
       }
-      
-      // 2. FALLBACK TO FIRESTORE (Source-of-Truth Path, only if local fails)
+
       if (!productData) {
         try {
           const docRef = doc(db, "products", productId);
-          const snapshot = await getDoc(docRef); // Targeted Firestore Read (1 read)
-          
+          const snapshot = await getDoc(docRef);
+
           if (snapshot.exists()) {
             productData = { id: snapshot.id, ...snapshot.data() };
             console.log(`Product ${productId} fetched live from Firestore.`);
@@ -76,7 +54,6 @@ export default function ProductModal({ product: initialProduct, onClose }) {
         }
       }
 
-      // 3. Set Final State
       if (productData) {
         setProduct(productData);
       } else {
@@ -86,79 +63,130 @@ export default function ProductModal({ product: initialProduct, onClose }) {
 
     };
     fetchProduct();
-  }, [productId, initialProduct]); // Depend on product ID and the initial prop for safety
+  }, [productId, initialProduct]);
 
   if (showUploader)
     return <ProductUploaderModal product={product} onClose={() => setShowUploader(false)} />;
 
   return (
-    <Drawer
-      isOpen
-      placement="bottom"
-      onClose={onClose}
-      size="full" 
-    >
-      <DrawerOverlay />
-      <DrawerContent bg="gray.900" color="gold" borderTopRadius="xl">
-        <DrawerHeader textAlign="center">
-          {product ? product.description || "Producto" : "Cargando..."}
-        </DrawerHeader>
-        <DrawerBody>
-          {loading ? ( // ADDITION: Display spinner while loading
-            <Center h="100%">
-              <VStack>
-                <Spinner size="lg" color="gold" />
-                <Text>Verificando base de datos...</Text>
-              </VStack>
-            </Center>
-          ) : product && product.notFound ? ( // Handle Not Found Case
-            <Text color="red.400" textAlign="center">
-              Producto con código **{productId}** no encontrado en la base de datos.
-            </Text>
-          ) : product ? (
-            <VStack spacing={3} align="start">
-              <Text>
-                <b>Código:</b> {productId}
-              </Text>
-              <Text>
-                <b>Descripción:</b> {product.description} 
-              </Text>
-              <Text>
-                <b>Stock:</b> {product.stock ?? "N/A"} 
-              </Text>
-              <Text>
-                <b>Precio:</b> ${product.price ?? "Sin precio"}
-              </Text>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+        />
 
-              {product.photoURL && (
-                <Image
-                  src={product.photoURL}
-                  alt={product.description}
-                  w="20%"
-                  maxH="80px"
-                  borderRadius="md"
-                  objectFit="cover"
-                  cursor="pointer" 
-                  onClick={() => {}}
-                />
-              )}
-            </VStack>
-          ) : (
-            <Text>Error al cargar datos.</Text>
+        {/* Modal Content */}
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="z-10 w-full max-w-2xl bg-backgroundDark900 border border-borderDark800 sm:border-b-0 border-b-0 sm:rounded-2xl rounded-t-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+        >
+          {/* Header area - custom header specifically for the modal */}
+          <div className="flex items-center justify-between p-6 border-b border-borderDark800">
+            <div className="flex flex-col">
+              <span className="aurum-subtitle mb-1">{product?.id || "N/A"}</span>
+              <h2 className="aurum-title-stack line-clamp-2">
+                {product ? product.description || "Producto" : "Cargando..."}
+              </h2>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-backgroundDark950 border border-borderDark800 flex items-center justify-center text-textDark400 hover:text-white transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                <svg className="animate-spin h-8 w-8 text-amber400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-textDark400 font-medium">Verificando base de datos...</p>
+              </div>
+            ) : product && product.notFound ? (
+              <div className="py-12 bg-red-500/10 border border-red-500/20 rounded-2xl flex flex-col items-center text-center px-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-12 h-12 text-red-500 mb-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-red-400 font-medium text-lg">Producto con código <span className="text-white font-bold">{productId}</span> no encontrado.</p>
+              </div>
+            ) : product ? (
+              <div className="space-y-6">
+                {product.photoURL ? (
+                  <div className="w-full aspect-square md:aspect-[3/2] bg-backgroundDark950 rounded-2xl overflow-hidden border border-borderDark800 relative group">
+                    <img
+                      src={product.photoURL}
+                      alt={product.description}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                      <span className="text-sm font-medium text-white shadow-sm">Foto del Producto</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-48 bg-backgroundDark950 rounded-2xl border border-dashed border-borderDark800 flex flex-col items-center justify-center text-textDark400 space-y-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 opacity-50">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                    </svg>
+                    <p className="text-sm">Sin imagen</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="aurum-card-inner space-y-1">
+                    <span className="text-xs font-bold text-textDark400 uppercase tracking-wider">Código</span>
+                    <p className="font-medium text-lg text-white">{productId}</p>
+                  </div>
+                  <div className="aurum-card-inner space-y-1">
+                    <span className="text-xs font-bold text-textDark400 uppercase tracking-wider">Stock</span>
+                    <p className="font-medium text-lg text-white">{product.stock ?? "N/A"}</p>
+                  </div>
+                  <div className="aurum-card-inner col-span-2 flex items-center justify-between border border-amber400/20 bg-amber400/5">
+                    <span className="text-sm font-bold text-amber400 uppercase tracking-wider">Precio</span>
+                    <p className="text-3xl font-light tracking-tight text-white">${product.price ?? "—"}</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-textDark400 py-10">
+                Error al cargar datos.
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          {!loading && product && (
+            <div className="p-6 border-t border-borderDark800 bg-backgroundDark900 flex space-x-4">
+              <button
+                onClick={() => setShowUploader(true)}
+                className="aurum-btn-secondary flex-1"
+              >
+                {product.photoURL ? "Cambiar Imagen" : "Subir Imagen"}
+              </button>
+              <button
+                onClick={onClose}
+                className="aurum-btn-primary flex-1 bg-white hover:bg-neutral-200"
+              >
+                Listo
+              </button>
+            </div>
           )}
-        </DrawerBody>
-        {/* Only show footer if not loading and a product (or notFound) exists */}
-        {!loading && product && (
-          <DrawerFooter justifyContent="space-between">
-            <Button colorScheme="gold" onClick={() => setShowUploader(true)}>
-              Subir imagen
-            </Button>
-            <Button colorScheme="red" onClick={onClose}>
-              Cerrar
-            </Button>
-          </DrawerFooter>
-        )}
-      </DrawerContent>
-    </Drawer>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 }

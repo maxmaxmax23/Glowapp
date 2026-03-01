@@ -21,6 +21,7 @@
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
     "@zxing/library": "^0.21.3",
+    "clsx": "^2.1.1",
     "dotenv": "^17.2.2",
     "firebase": "^12.3.0",
     "firebase-admin": "^13.5.0",
@@ -29,7 +30,9 @@
     "html5-qrcode": "^2.3.8",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.1",
     "react-zxing": "^2.1.0",
+    "tailwind-merge": "^3.5.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
