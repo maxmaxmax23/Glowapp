@@ -46,17 +46,11 @@ export default function PriceTagPrinter({ onClose }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(template));
   }, [template]);
 
-  const maintainFocus = useCallback(() => {
+  const refocusScanner = useCallback(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
-
-  useEffect(() => {
-    maintainFocus();
-    window.addEventListener("click", maintainFocus);
-    return () => window.removeEventListener("click", maintainFocus);
-  }, [maintainFocus]);
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -92,7 +86,7 @@ export default function PriceTagPrinter({ onClose }) {
       // Format price for string editing
       const priceStr = typeof item.price === 'number' ? `$${item.price.toLocaleString('es-AR')}` : (item.price || "—");
       setQueue((prev) => [...prev, { ...item, price: priceStr }]);
-      maintainFocus();
+      refocusScanner();
     } else {
       setWarning(`No encontrado: ${queryKey}`);
       setTimeout(() => setWarning(""), 3000);
@@ -110,7 +104,7 @@ export default function PriceTagPrinter({ onClose }) {
       price: "$0.00",
       id: "MANUAL"
     }]);
-    maintainFocus();
+    refocusScanner();
   };
 
   const handleQueueEdit = (index, key, newValue) => {
@@ -233,11 +227,6 @@ export default function PriceTagPrinter({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col md:flex-row overflow-hidden text-textLight50">
       
-      {/* Invisible Wedge Input */}
-      <form onSubmit={handleScanInput} className="absolute opacity-0 pointer-events-none">
-        <input ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} autoFocus autoComplete="off" />
-      </form>
-
       {/* Editor & Configuration Panel */}
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
@@ -252,6 +241,22 @@ export default function PriceTagPrinter({ onClose }) {
 
         <div className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
           
+          {/* Visible Wedge Input */}
+          <div className="space-y-2">
+            <label className="aurum-subtitle text-xs text-amber400">🔍 Escáner (Clic aquí)</label>
+            <form onSubmit={handleScanInput}>
+              <input 
+                ref={inputRef} 
+                value={inputValue} 
+                onChange={(e) => setInputValue(e.target.value)} 
+                autoFocus 
+                autoComplete="off" 
+                className="aurum-input w-full border-amber400/30 focus:border-amber400 focus:ring-1 focus:ring-amber400 bg-amber400/5 transition-all text-amber400 placeholder:text-amber400/30 font-mono text-center"
+                placeholder="Escanee un producto..."
+              />
+            </form>
+          </div>
+
           {/* Main Template Preview (Interactive) */}
           <div className="space-y-2">
             <label className="aurum-subtitle text-xs">Previsualización (Arrastra los textos)</label>
@@ -346,7 +351,7 @@ export default function PriceTagPrinter({ onClose }) {
            <button onClick={handleAddManual} className="w-full aurum-btn-secondary" disabled={queue.length >= template.layoutFormat}>
              + Añadir Cartel Manual
            </button>
-           <button onClick={() => { setQueue([]); maintainFocus(); }} className="w-full bg-transparent text-textDark400 text-sm py-2 hover:text-white transition-colors" disabled={queue.length === 0}>
+           <button onClick={() => { setQueue([]); refocusScanner(); }} className="w-full bg-transparent text-textDark400 text-sm py-2 hover:text-white transition-colors" disabled={queue.length === 0}>
              Limpiar Cola
            </button>
         </div>
