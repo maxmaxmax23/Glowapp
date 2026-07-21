@@ -88,12 +88,37 @@ export default function PriceTagPrinter({ onClose }) {
 
     const results = await lookupLocalProduct(queryKey);
     if (results && results.length > 0) {
-      setQueue((prev) => [...prev, results[0]]);
+      const item = results[0];
+      // Format price for string editing
+      const priceStr = typeof item.price === 'number' ? `$${item.price.toLocaleString('es-AR')}` : (item.price || "—");
+      setQueue((prev) => [...prev, { ...item, price: priceStr }]);
       maintainFocus();
     } else {
       setWarning(`No encontrado: ${queryKey}`);
       setTimeout(() => setWarning(""), 3000);
     }
+  };
+
+  const handleAddManual = () => {
+    if (queue.length >= template.layoutFormat) {
+      setWarning(`Límite alcanzado (${template.layoutFormat}).`);
+      setTimeout(() => setWarning(""), 3000);
+      return;
+    }
+    setQueue(prev => [...prev, {
+      description: "Producto Manual",
+      price: "$0.00",
+      id: "MANUAL"
+    }]);
+    maintainFocus();
+  };
+
+  const handleQueueEdit = (index, key, newValue) => {
+    setQueue(prev => {
+      const newQueue = [...prev];
+      newQueue[index] = { ...newQueue[index], [key]: newValue };
+      return newQueue;
+    });
   };
 
   const handleDragEnd = (elementKey, info) => {
@@ -159,12 +184,16 @@ export default function PriceTagPrinter({ onClose }) {
     );
   };
 
-  // Helper to render an element in the print output (static)
-  const renderPrintElement = (key, text) => {
+  // Helper to render an element in the print output (Editable)
+  const renderPrintElement = (key, text, index) => {
     const el = template.elements[key];
     if (!el.visible) return null;
     return (
       <div
+        onBlur={(e) => handleQueueEdit(index, key, e.currentTarget.innerText)}
+        suppressContentEditableWarning={true}
+        contentEditable={true}
+        className="print:!border-none print:!outline-none hover:outline hover:outline-dashed hover:outline-amber400 hover:outline-1"
         style={{
           position: "absolute",
           width: el.width,
@@ -176,16 +205,16 @@ export default function PriceTagPrinter({ onClose }) {
           textAlign: "center",
           fontWeight: key === 'price' ? 'bold' : 'normal',
           lineHeight: '1.1',
-          zIndex: 20
+          zIndex: 20,
+          outline: 'none',
+          cursor: 'text',
+          overflow: 'hidden',
+          display: key === 'description' ? '-webkit-box' : 'block',
+          WebkitLineClamp: key === 'description' ? 2 : 'none',
+          WebkitBoxOrient: key === 'description' ? 'vertical' : 'unset',
         }}
       >
-        {key === 'description' ? (
-           <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-             {text}
-           </span>
-        ) : (
-           text
-        )}
+        {text}
       </div>
     );
   };
@@ -314,7 +343,10 @@ export default function PriceTagPrinter({ onClose }) {
            <button onClick={() => window.print()} className="w-full aurum-btn-primary" disabled={queue.length === 0}>
              Imprimir ({queue.length})
            </button>
-           <button onClick={() => { setQueue([]); maintainFocus(); }} className="w-full aurum-btn-secondary" disabled={queue.length === 0}>
+           <button onClick={handleAddManual} className="w-full aurum-btn-secondary" disabled={queue.length >= template.layoutFormat}>
+             + Añadir Cartel Manual
+           </button>
+           <button onClick={() => { setQueue([]); maintainFocus(); }} className="w-full bg-transparent text-textDark400 text-sm py-2 hover:text-white transition-colors" disabled={queue.length === 0}>
              Limpiar Cola
            </button>
         </div>
@@ -338,10 +370,10 @@ export default function PriceTagPrinter({ onClose }) {
                       <img src={template.bgUrl} alt="Fondo" className="absolute inset-0 w-full h-full object-cover" />
                     )}
                     
-                    {/* Elements mapped exactly to editor coordinates */}
-                    {renderPrintElement('description', item.description)}
-                    {renderPrintElement('price', `$${typeof item.price === 'number' ? item.price.toLocaleString('es-AR') : (item.price || "—")}`)}
-                    {renderPrintElement('id', item.id)}
+                    {/* Elements mapped exactly to editor coordinates and now editable */}
+                    {renderPrintElement('description', item.description, i)}
+                    {renderPrintElement('price', item.price, i)}
+                    {renderPrintElement('id', item.id, i)}
                  </div>
                ))}
             </div>
