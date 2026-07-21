@@ -25,7 +25,7 @@
 
   /* Cards */
   .aurum-card {
-    @apply bg-backgroundDark900 border border-borderDark800 rounded-2xl p-5 md:p-6 shadow-xl;
+    @apply bg-backgroundDark900 border border-borderDark800 rounded-2xl p-5 md:p-6;
   }
   
   .aurum-card-inner {
@@ -72,4 +72,37 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #404040;
+}
+
+/* --- Print Spooler Overrides --- */
+@media print {
+  /* Hide everything globally */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Make only the print sheet area and its children visible */
+  #gl-print-sheet-area,
+  #gl-print-sheet-area * {
+    visibility: visible;
+  }
+
+  /* Force exact A4 dimensions and absolute positioning at top left */
+  #gl-print-sheet-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 0;
+    background-color: white !important;
+    /* Optional: override background color if dark mode is bleeding */
+  }
+
+  /* Hide print margins/headers usually added by browsers */
+  @page {
+    margin: 0;
+    size: A4 portrait;
+  }
 }

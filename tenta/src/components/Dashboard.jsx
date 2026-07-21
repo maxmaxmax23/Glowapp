@@ -4,7 +4,7 @@ import AurumHeader from "./AurumHeader";
 import { motion } from "framer-motion";
 import RawPhotoExtractor from "./admin/RawPhotoExtractor";
 
-export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpenPhotos, firebaseWrites }) {
+export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpenPhotos, onOpenPrinter, firebaseWrites }) {
   const [syncStatus, setSyncStatus] = useState({
     lastSync: 0,
     productCount: 0,
@@ -56,7 +56,7 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpen
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
         className="w-full max-w-md px-4 mt-6 flex flex-col space-y-6 pb-12"
       >
         <div className="flex flex-col space-y-4">
@@ -74,13 +74,16 @@ export default function Dashboard({ onScan, onOpenImporter, onOpenMerger, onOpen
             <button className="aurum-btn-secondary col-span-2" onClick={onOpenPhotos}>
               Carga Masiva WebP
             </button>
+            <button className="aurum-btn-secondary col-span-2 border-dashed border-amber400" onClick={onOpenPrinter}>
+              Imprimir Etiquetas
+            </button>
           </div>
         </div>
 
         {/* Sync Status Card */}
         <div className="aurum-card mt-8">
           <button
-            className="w-full rounded-xl bg-green500 hover:bg-green-400 active:scale-95 text-black font-semibold py-3 transition-all duration-300 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center"
+            className="w-full aurum-btn-primary flex items-center justify-center"
             onClick={handleSyncProducts}
             disabled={syncStatus.isSyncing}
           >

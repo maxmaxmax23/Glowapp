@@ -17,7 +17,7 @@ export default function AurumHeader({ title, subtitle, variant = 'stack', rightA
         <motion.header
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className={`w-full flex items-center justify-between py-6 px-4 md:px-8`}
         >
             <div className="flex items-center gap-4">

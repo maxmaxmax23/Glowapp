@@ -85,8 +85,8 @@ export default function ProductModal({ product: initialProduct, onClose }) {
           initial={{ y: "100%" }}
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="z-10 w-full max-w-2xl bg-backgroundDark900 border border-borderDark800 sm:border-b-0 border-b-0 sm:rounded-2xl rounded-t-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="z-10 w-full max-w-2xl bg-backgroundDark900 border border-borderDark800 sm:border-b-0 border-b-0 sm:rounded-2xl rounded-t-3xl overflow-hidden max-h-[90vh] flex flex-col"
         >
           {/* Header area - custom header specifically for the modal */}
           <div className="flex items-center justify-between p-6 border-b border-borderDark800">
@@ -146,16 +146,16 @@ export default function ProductModal({ product: initialProduct, onClose }) {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="aurum-card-inner space-y-1">
+                <div className="flex flex-col border-t border-borderDark800">
+                  <div className="flex justify-between items-center py-3 border-b border-borderDark800">
                     <span className="text-xs font-bold text-textDark400 uppercase tracking-wider">Código</span>
                     <p className="font-medium text-lg text-white">{productId}</p>
                   </div>
-                  <div className="aurum-card-inner space-y-1">
+                  <div className="flex justify-between items-center py-3 border-b border-borderDark800">
                     <span className="text-xs font-bold text-textDark400 uppercase tracking-wider">Stock</span>
                     <p className="font-medium text-lg text-white">{product.stock ?? "N/A"}</p>
                   </div>
-                  <div className="aurum-card-inner col-span-2 flex items-center justify-between border border-amber400/20 bg-amber400/5">
+                  <div className="flex justify-between items-center py-4 border-b border-borderDark800">
                     <span className="text-sm font-bold text-amber400 uppercase tracking-wider">Precio</span>
                     <p className="text-3xl font-light tracking-tight text-white">${product.price ?? "—"}</p>
                   </div>
@@ -179,7 +179,7 @@ export default function ProductModal({ product: initialProduct, onClose }) {
               </button>
               <button
                 onClick={onClose}
-                className="aurum-btn-primary flex-1 bg-white hover:bg-neutral-200"
+                className="aurum-btn-primary flex-1"
               >
                 Listo
               </button>

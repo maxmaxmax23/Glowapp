@@ -7,6 +7,7 @@ import ProductModal from "./components/ProductModal.jsx";
 import ImporterModal from "./components/ImporterModal.jsx";
 import MergerModal from "./components/MergerModal.jsx";
 import BulkPhotoDropzone from "./components/admin/BulkPhotoDropzone.jsx";
+import PriceTagPrinter from "./components/admin/PriceTagPrinter.jsx";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -16,6 +17,7 @@ export default function App() {
   const [showImporter, setShowImporter] = useState(false);
   const [showMerger, setShowMerger] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
+  const [showPrinter, setShowPrinter] = useState(false);
   const [firebaseWrites, setFirebaseWrites] = useState(0);
 
   const incrementWrites = (count) => setFirebaseWrites((prev) => prev + count);
@@ -59,6 +61,7 @@ export default function App() {
             onOpenImporter={() => setShowImporter(true)}
             onOpenMerger={() => setShowMerger(true)}
             onOpenPhotos={() => setShowPhotos(true)}
+            onOpenPrinter={() => setShowPrinter(true)}
             firebaseWrites={firebaseWrites}
           />
 
@@ -82,6 +85,10 @@ export default function App() {
 
           {showPhotos && (
             <BulkPhotoDropzone onClose={() => setShowPhotos(false)} />
+          )}
+
+          {showPrinter && (
+            <PriceTagPrinter onClose={() => setShowPrinter(false)} />
           )}
         </>
       )}
